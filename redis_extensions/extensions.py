@@ -3,19 +3,19 @@
 
 class RedisExtensions(object):
 
-    def get_delete(conn, key):
+    def get_delete(self, conn, key):
         pipe = conn.pipeline()
         pipe.get(key)
         pipe.delete(key)
         return pipe.execute()
 
-    def get_rename(conn, key, suffix='del'):
+    def get_rename(self, conn, key, suffix='del'):
         pipe = conn.pipeline()
         pipe.get(key)
         pipe.rename(key, '{}_{}'.format(key, suffix)) if conn.exists(key) else pipe.exists(key)
         return pipe.execute()
 
-    def multi_pop(conn, key, num):
+    def multi_pop(self, conn, key, num):
         if num <= 0:
             return [[], False, 0]
         pipe = conn.pipeline()
@@ -24,14 +24,14 @@ class RedisExtensions(object):
         pipe.llen(key)
         return pipe.execute()
 
-    def trim_lpush(conn, key, num, *values):
+    def trim_lpush(self, conn, key, num, *values):
         pipe = conn.pipeline()
         pipe.lpush(key, *values)
         pipe.ltrim(key, 0, num - 1)
         pipe.llen(key)
         return pipe.execute()
 
-    def trim_rpush(conn, key, num, *values):
+    def trim_rpush(self, conn, key, num, *values):
         pipe = conn.pipeline()
         pipe.rpush(key, *values)
         pipe.ltrim(key, -num, - 1)
