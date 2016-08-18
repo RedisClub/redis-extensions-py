@@ -6,4 +6,7 @@ from redis_extensions.extensions import (
     multi_pop,
     trim_lpush,
     trim_rpush,
+    rawscore,
+    zaddwithstamps,
+    zincrbywithstamps,
 )
