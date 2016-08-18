@@ -53,7 +53,7 @@ class RedisExtensions(object):
     def rawscore(self, score):
         if not score:
             return 0.0
-        return float(int(int(score) / self.rate))
+        return float(int(float(score) / self.rate))
 
     def stampscore(self, score, desc=False):
         return score * self.rate + self.timestamps(desc)
