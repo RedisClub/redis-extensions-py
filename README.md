@@ -8,9 +8,9 @@ pip install redis-extensions
 
 ## Usage
 ```python
-In [1]: import redis_extensions
+In [1]: import redis_extensions as redis
 
-In [2]: r = redis_extensions.StrictRedisExtensions(host='localhost', port=6379, db=0)
+In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
 
 In [3]: r.zaddwithstamps('sorted_set', 1, 'a', 2, 'b')
 Out[3]: 1
