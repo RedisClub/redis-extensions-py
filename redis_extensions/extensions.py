@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import importlib
 import json
+import logging
 import time
 import uuid
 
@@ -9,15 +11,16 @@ from redis._compat import iteritems
 from redis.exceptions import WatchError
 
 
+logger = logging.getLogger('redis_extensions')
+logger.addHandler(logging.StreamHandler())
+logger.setLevel(logging.INFO)
+
+
 class StrictRedisExtensions(StrictRedis):
     """
-    Implementation of the Redis protocol.
+    Extension of [redis-py](https://github.com/andymccurdy/redis-py)'s StrictRedis.
 
-    This abstract class provides a Python interface to all Redis commands
-    and an implementation of the Redis protocol.
-
-    Connection and Pipeline derive from this, implementing how
-    the commands are sent and received to the Redis server
+    Support all implementations of StrictRedis and Realize some frequently used functions.
     """
 
     def __new__(cls, *args, **kwargs):
@@ -26,40 +29,79 @@ class StrictRedisExtensions(StrictRedis):
         return super(StrictRedisExtensions, cls).__new__(cls, *args, **kwargs)
 
     # String Section
-    def get_delete(self, key):
+    def get_delete(self, name):
+        """
+        Return the value at key ``name``.
+        Delete key ``name``.
+        """
         pipe = self.pipeline()
-        pipe.get(key)
-        pipe.delete(key)
+        pipe.get(name)
+        pipe.delete(name)
         return pipe.execute()
 
-    def get_rename(self, key, suffix='del'):
+    def get_rename(self, name, suffix='del'):
+        """
+        Return the value at key ``name``.
+        Rename key ``name`` to ``name_suffix``.
+
+        ``suffix`` for rename key ``name``, default ``del``.
+        """
         pipe = self.pipeline()
-        pipe.get(key)
-        pipe.rename(key, '{}_{}'.format(key, suffix)) if self.exists(key) else pipe.exists(key)
+        pipe.get(name)
+        pipe.rename(name, '{}_{}'.format(name, suffix)) if self.exists(name) else pipe.exists(name)
         return pipe.execute()
 
     # List Section
-    def multi_pop(self, key, num):
+    def multi_lpop(self, name, num):
+        """
+        LPop multi items of the list ``name``.
+        """
         if num <= 0:
             return [[], False, 0]
         pipe = self.pipeline()
-        pipe.lrange(key, 0, num - 1)
-        pipe.ltrim(key, num, -1)
-        pipe.llen(key)
+        pipe.lrange(name, 0, num - 1)
+        pipe.ltrim(name, num, -1)
+        pipe.llen(name)
         return pipe.execute()
 
-    def trim_lpush(self, key, num, *values):
+    def multi_rpop(self, name, num):
+        """
+        RPop multi items of the list ``name``.
+        """
+        if num <= 0:
+            return [[], False, 0]
         pipe = self.pipeline()
-        pipe.lpush(key, *values)
-        pipe.ltrim(key, 0, num - 1)
-        pipe.llen(key)
+        pipe.lrange(name, -num, 1)
+        pipe.ltrim(name, 0, -num - 1)
+        pipe.llen(name)
         return pipe.execute()
 
-    def trim_rpush(self, key, num, *values):
+    def multi_pop(self, name, num):
+        """
+        Alias for multi_lpop.
+        """
+        return self.multi_lpop(name, num)
+
+    def trim_lpush(self, name, num, *values):
+        """
+        LPush ``values`` onto the head of the list ``name``.
+        Limit ``num`` from the head of the list ``name``.
+        """
         pipe = self.pipeline()
-        pipe.rpush(key, *values)
-        pipe.ltrim(key, -num, - 1)
-        pipe.llen(key)
+        pipe.lpush(name, *values)
+        pipe.ltrim(name, 0, num - 1)
+        pipe.llen(name)
+        return pipe.execute()
+
+    def trim_rpush(self, name, num, *values):
+        """
+        RPush ``values`` onto the tail of the list ``name``.
+        Limit ``num`` from the tail of the list ``name``.
+        """
+        pipe = self.pipeline()
+        pipe.rpush(name, *values)
+        pipe.ltrim(name, -num, - 1)
+        pipe.llen(name)
         return pipe.execute()
 
     # Sorted Set Section
@@ -132,7 +174,25 @@ class StrictRedisExtensions(StrictRedis):
 
         return identifier
 
+    def __callable_func(self, f):
+        if callable(f):
+            return f
+        try:
+            module, func = f.rsplit('.', 1)
+            m = importlib.import_module(module)
+            return getattr(m, func)
+        except Exception as e:
+            logger.error(e)
+            return None
+
     def poll_queue(self, callbacks={}, delayed='delayed:default'):
+        callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
+        callbacks = {k: v for k, v in iteritems(callbacks) if v}
+
+        logger.info('Available callbacks ({}):'.format(len(callbacks)))
+        for k, v in iteritems(callbacks):
+            logger.info('* {}: {}'.format(k, v))
+
         while True:
             item = self.zrange(delayed, 0, 0, withscores=True)
 
