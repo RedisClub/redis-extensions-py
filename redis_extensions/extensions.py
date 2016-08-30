@@ -75,7 +75,7 @@ class StrictRedisExtensions(StrictRedis):
         """
         if num <= 0:
             raise ValueError('The num argument should be positive')
-        return self.pipeline().lrange(name, -num, 1).ltrim(name, 0, -num - 1).llen(name).execute()
+        return self.pipeline().lrange(name, -num, -1).ltrim(name, 0, -num - 1).llen(name).execute()
 
     def multi_pop(self, name, num):
         """
