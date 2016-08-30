@@ -8,7 +8,7 @@ import uuid
 
 from redis import StrictRedis
 from redis._compat import iteritems
-from redis.exceptions import WatchError
+from redis.exceptions import ResponseError, WatchError
 
 
 logger = logging.getLogger('redis_extensions')
@@ -34,10 +34,7 @@ class StrictRedisExtensions(StrictRedis):
         Return the value at key ``name``.
         Delete key ``name``.
         """
-        pipe = self.pipeline()
-        pipe.get(name)
-        pipe.delete(name)
-        return pipe.execute()
+        return self.pipeline().get(name).delete(name).execute()
 
     def get_rename(self, name, suffix='del'):
         """
@@ -46,10 +43,22 @@ class StrictRedisExtensions(StrictRedis):
 
         ``suffix`` for rename key ``name``, default ``del``.
         """
-        pipe = self.pipeline()
-        pipe.get(name)
-        pipe.rename(name, '{}_{}'.format(name, suffix)) if self.exists(name) else pipe.exists(name)
-        return pipe.execute()
+        try:
+            return self.pipeline().get(name).rename(name, '{}_{}'.format(name, suffix)).execute()
+        except ResponseError:
+            return [None, False]
+
+    def get_or_set(self, name, value=None):
+        """
+        Return the value at key ``name``, or Set and return if the key doesn't exist.
+        """
+        return self.pipeline().set(name, value, nx=True).get(name).execute()[::-1]
+
+    def get_or_setex(self, name, time, value=None):
+        """
+        Return the value at key ``name``, or Setex and return if the key doesn't exist.
+        """
+        return self.pipeline().set(name, value, ex=time, nx=True).get(name).execute()[::-1]
 
     # List Section
     def multi_lpop(self, name, num):
@@ -58,11 +67,7 @@ class StrictRedisExtensions(StrictRedis):
         """
         if num <= 0:
             return [[], False, 0]
-        pipe = self.pipeline()
-        pipe.lrange(name, 0, num - 1)
-        pipe.ltrim(name, num, -1)
-        pipe.llen(name)
-        return pipe.execute()
+        return self.pipeline().lrange(name, 0, num - 1).ltrim(name, num, -1).llen(name).execute()
 
     def multi_rpop(self, name, num):
         """
@@ -70,11 +75,7 @@ class StrictRedisExtensions(StrictRedis):
         """
         if num <= 0:
             return [[], False, 0]
-        pipe = self.pipeline()
-        pipe.lrange(name, -num, 1)
-        pipe.ltrim(name, 0, -num - 1)
-        pipe.llen(name)
-        return pipe.execute()
+        return self.pipeline().lrange(name, -num, 1).ltrim(name, 0, -num - 1).llen(name).execute()
 
     def multi_pop(self, name, num):
         """
@@ -87,22 +88,14 @@ class StrictRedisExtensions(StrictRedis):
         LPush ``values`` onto the head of the list ``name``.
         Limit ``num`` from the head of the list ``name``.
         """
-        pipe = self.pipeline()
-        pipe.lpush(name, *values)
-        pipe.ltrim(name, 0, num - 1)
-        pipe.llen(name)
-        return pipe.execute()
+        return self.pipeline().lpush(name, *values).ltrim(name, 0, num - 1).llen(name).execute()
 
     def trim_rpush(self, name, num, *values):
         """
         RPush ``values`` onto the tail of the list ``name``.
         Limit ``num`` from the tail of the list ``name``.
         """
-        pipe = self.pipeline()
-        pipe.rpush(name, *values)
-        pipe.ltrim(name, -num, - 1)
-        pipe.llen(name)
-        return pipe.execute()
+        return self.pipeline().rpush(name, *values).ltrim(name, -num, - 1).llen(name).execute()
 
     # Sorted Set Section
     def __timestamps(self, desc=False):
