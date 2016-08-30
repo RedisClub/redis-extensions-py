@@ -66,7 +66,7 @@ class StrictRedisExtensions(StrictRedis):
         LPop multi items of the list ``name``.
         """
         if num <= 0:
-            return [[], False, 0]
+            raise ValueError('The num argument should be positive')
         return self.pipeline().lrange(name, 0, num - 1).ltrim(name, num, -1).llen(name).execute()
 
     def multi_rpop(self, name, num):
@@ -74,7 +74,7 @@ class StrictRedisExtensions(StrictRedis):
         RPop multi items of the list ``name``.
         """
         if num <= 0:
-            return [[], False, 0]
+            raise ValueError('The num argument should be positive')
         return self.pipeline().lrange(name, -num, 1).ltrim(name, 0, -num - 1).llen(name).execute()
 
     def multi_pop(self, name, num):
