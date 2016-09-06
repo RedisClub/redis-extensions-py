@@ -201,7 +201,7 @@ class StrictRedisExtensions(StrictRedis):
                 continue
 
             # Callbacks
-            for queue in callbacks:
+            if queue in callbacks:
                 callbacks[queue](name, args)
 
             if self.zrem(delayed, item):
