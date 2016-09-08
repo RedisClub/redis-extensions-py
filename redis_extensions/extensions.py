@@ -28,7 +28,17 @@ class StrictRedisExtensions(StrictRedis):
         cls.__max_timestamp = 9999999999999
         return super(StrictRedisExtensions, cls).__new__(cls, *args, **kwargs)
 
-    # String Section
+    # Keys Section
+    def delete_keys(self, pattern='*'):
+        return self.delete(*self.scan_iter(pattern))
+
+    # Strings Section
+    def get_multi(self, *names):
+        pipe = self.pipeline()
+        for name in names:
+            pipe.get(name)
+        return pipe.execute()
+
     def get_delete(self, name):
         """
         Return the value at key ``name``.
@@ -60,7 +70,24 @@ class StrictRedisExtensions(StrictRedis):
         """
         return self.pipeline().set(name, value, ex=time, nx=True).get(name).execute()[::-1]
 
-    # List Section
+    # Lists Section
+    def lpush_nx(self, name, value, force=True):
+        if force:
+            return self.pipeline().lrem(name, 0, value).lpush(name, value).execute()
+        else:
+            if not str(value) in self.lrange(name, 0, -1):
+                return self.lpush(name, value)
+
+    def rpush_nx(self, name, value, force=True):
+        if force:
+            return self.pipeline().lrem(name, 0, value).rpush(name, value).execute()
+        else:
+            if not str(value) in self.lrange(name, 0, -1):
+                return self.rpush(name, value)
+
+    def push_nx(self, name, value, force=True):
+        return self.lpush_nx(name, value, force)
+
     def multi_lpop(self, name, num):
         """
         LPop multi items of the list ``name``.
@@ -83,6 +110,19 @@ class StrictRedisExtensions(StrictRedis):
         """
         return self.multi_lpop(name, num)
 
+    def multi_lpop_delete(self, name, num):
+        if num <= 0:
+            raise ValueError('The num argument should be positive')
+        return self.pipeline().lrange(name, 0, num - 1).delete(name).execute()
+
+    def multi_rpop_delete(self, name, num):
+        if num <= 0:
+            raise ValueError('The num argument should be positive')
+        return self.pipeline().lrange(name, -num, -1).delete(name).execute()
+
+    def multi_pop_delete(self, name, num):
+        return self.multi_lpop_delete(name, num)
+
     def trim_lpush(self, name, num, *values):
         """
         LPush ``values`` onto the head of the list ``name``.
@@ -97,7 +137,7 @@ class StrictRedisExtensions(StrictRedis):
         """
         return self.pipeline().rpush(name, *values).ltrim(name, -num, - 1).llen(name).execute()
 
-    # Sorted Set Section
+    # Sorted Sets Section
     def __timestamps(self, desc=False):
         stamp = int(time.time() * 1000)
         return self.__max_timestamp - stamp if desc else stamp
@@ -121,7 +161,7 @@ class StrictRedisExtensions(StrictRedis):
     def zincrbywithstamps(self, name, value, amount=1, desc=False):
         return self.zadd(name, self.__stampscore(self.rawscore(self.zscore(name, value)) + amount, desc), value)
 
-    # Lock Section
+    # Locks Section
     def __acquire_lock(self, lockname, acquire_timeout=10):
         identifier = str(uuid.uuid4())
 
@@ -154,7 +194,7 @@ class StrictRedisExtensions(StrictRedis):
 
         return False
 
-    # Delay_task Section
+    # Delay Tasks Section
     def execute_later(self, queue, name, args=None, delayed='delayed:default', delay=0):
         identifier = str(uuid.uuid4())
 
