@@ -30,10 +30,16 @@ class StrictRedisExtensions(StrictRedis):
 
     # Keys Section
     def delete_keys(self, pattern='*'):
+        """
+        Delete a list of keys matching ``pattern``.
+        """
         return self.delete(*self.scan_iter(pattern))
 
     # Strings Section
     def get_multi(self, *names):
+        """
+        Return the values at keys ``names``.
+        """
         pipe = self.pipeline()
         for name in names:
             pipe.get(name)
@@ -72,6 +78,11 @@ class StrictRedisExtensions(StrictRedis):
 
     # Lists Section
     def lpush_nx(self, name, value, force=True):
+        """
+        Push ``value`` onto the head of the list ``name`` if ``value`` not exists.
+
+        ``force`` if set to True, will ``lrem`` first then lpush.
+        """
         if force:
             return self.pipeline().lrem(name, 0, value).lpush(name, value).execute()
         else:
@@ -79,6 +90,11 @@ class StrictRedisExtensions(StrictRedis):
                 return self.lpush(name, value)
 
     def rpush_nx(self, name, value, force=True):
+        """
+        Push ``value`` onto the tail of the list ``name`` if ``value`` not exists.
+
+        ``force`` if set to True, will ``lrem`` first then rpush.
+        """
         if force:
             return self.pipeline().lrem(name, 0, value).rpush(name, value).execute()
         else:
@@ -86,6 +102,9 @@ class StrictRedisExtensions(StrictRedis):
                 return self.rpush(name, value)
 
     def push_nx(self, name, value, force=True):
+        """
+        Alias for lpush_nx.
+        """
         return self.lpush_nx(name, value, force)
 
     def multi_lpop(self, name, num):
@@ -111,16 +130,27 @@ class StrictRedisExtensions(StrictRedis):
         return self.multi_lpop(name, num)
 
     def multi_lpop_delete(self, name, num):
+        """
+        LPop multi items of the list ``name``.
+        Then delete the list ``name``
+        """
         if num < 0:
             raise ValueError('The num argument should not be negative')
         return self.pipeline().lrange(name, 0, num - 1).delete(name).execute()
 
     def multi_rpop_delete(self, name, num):
+        """
+        RPop multi items of the list ``name``.
+        Then delete the list ``name``
+        """
         if num < 0:
             raise ValueError('The num argument should not be negative')
         return self.pipeline().lrange(name, -num, -1).delete(name).execute()
 
     def multi_pop_delete(self, name, num):
+        """
+        Alias for multi_lpop_delete.
+        """
         return self.multi_lpop_delete(name, num)
 
     def trim_lpush(self, name, num, *values):
@@ -136,6 +166,12 @@ class StrictRedisExtensions(StrictRedis):
         Limit ``num`` from the tail of the list ``name``.
         """
         return self.pipeline().rpush(name, *values).ltrim(name, -num, - 1).llen(name).execute()
+
+    def trim_push(self, name, num, *values):
+        """
+        Alias for trim_lpush.
+        """
+        return self.trim_lpush(name, num, *values)
 
     # Sorted Sets Section
     def __timestamps(self, desc=False):
@@ -232,6 +268,8 @@ class StrictRedisExtensions(StrictRedis):
             if not item or item[0][1] > time.time():
                 time.sleep(.01)
                 continue
+
+            logger.info(item)
 
             item = item[0][0]
             identifier, queue, name, args = json.loads(item)
