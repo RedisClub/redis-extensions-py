@@ -30,11 +30,13 @@ class StrictRedisExtensions(StrictRedis):
         return super(StrictRedisExtensions, cls).__new__(cls, *args, **kwargs)
 
     # Keys Section
-    def delete_keys(self, pattern='*'):
+    def delete_keys(self, pattern='*', iter=False, count=None):
         """
         Delete a list of keys matching ``pattern``.
+
+        ``iter`` if set to True, will ``scan_iter`` first then ``delete``, else will ``keys`` first then ``delete``.
         """
-        return self.delete(*self.scan_iter(pattern))
+        return self.delete(*(self.scan_iter(pattern, count) if iter else self.keys(pattern)))
 
     # Strings Section
     def get_multi(self, *names):

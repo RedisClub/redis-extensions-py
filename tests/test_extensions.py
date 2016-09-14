@@ -6,9 +6,17 @@ import pytest
 class TestRedisExtensionsCommands(object):
 
     def test_delete_keys(self, r):
+        # Keys
         r['a:x'] = 'foo'
         r['a:y'] = 'bar'
         result = r.delete_keys('a:*')
+        assert result == 2
+        assert not r.exists('a:x')
+        assert not r.exists('a:y')
+        # Scan_iter
+        r['a:x'] = 'foo'
+        r['a:y'] = 'bar'
+        result = r.delete_keys('a:*', iter=True)
         assert result == 2
         assert not r.exists('a:x')
         assert not r.exists('a:y')
