@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import datetime
 import importlib
 import json
 import logging
@@ -173,7 +174,116 @@ class StrictRedisExtensions(StrictRedis):
         """
         return self.trim_lpush(name, num, *values)
 
+    def lpush_ex(self, name, ex_time, value):
+        """
+        Push ``value`` that expires in ``ex_time`` seconds onto the head of the list ``name``.
+
+        ``ex_time`` can be represented by an integer or a Python timedelta object.
+        """
+        if isinstance(ex_time, datetime.timedelta):
+            ex_time = ex_time.seconds + ex_time.days * 24 * 3600
+        return self.zadd(name, time.time() + ex_time, value)
+
+    def lrange_ex(self, name):
+        cur_time = time.time()
+        return self.pipeline().zrangebyscore(name, cur_time, '+inf').zremrangebyscore(name, 0, cur_time).execute()
+
     # Sorted Sets Section
+    def __list_substractor(self, minuend, subtrahend):
+        return [x for x in minuend if x not in subtrahend]
+
+    def zgt(self, name, value, withscores=False, score_cast_func=float):
+        """
+        Return a range of values from the sorted set ``name`` with scores (``value`` < score < ``+inf``).
+
+        ``withscores`` indicates to return the scores along with the values.
+        The return type is a list of (value, score) pairs.
+
+        ``score_cast_func`` a callable used to cast the score return value.
+        """
+        gte, eq = self.pipeline().zrangebyscore(name, value, '+inf', withscores=withscores, score_cast_func=score_cast_func).zrangebyscore(name, value, value, withscores=withscores, score_cast_func=score_cast_func).execute()
+        return self.__list_substractor(gte, eq)
+
+    def zgte(self, name, value, withscores=False, score_cast_func=float):
+        """
+        Return a range of values from the sorted set ``name`` with scores (``value`` <= score < ``+inf``).
+
+        ``withscores`` indicates to return the scores along with the values.
+        The return type is a list of (value, score) pairs.
+
+        ``score_cast_func`` a callable used to cast the score return value.
+        """
+        return self.zrangebyscore(name, value, '+inf', withscores=withscores, score_cast_func=score_cast_func)
+
+    def zlt(self, name, value, withscores=False, score_cast_func=float):
+        """
+        Return a range of values from the sorted set ``name`` with scores (``-inf`` < score < ``value``).
+
+        ``withscores`` indicates to return the scores along with the values.
+        The return type is a list of (value, score) pairs.
+
+        ``score_cast_func`` a callable used to cast the score return value.
+        """
+        lte, eq = self.pipeline().zrangebyscore(name, '-inf', value, withscores=withscores, score_cast_func=score_cast_func).zrangebyscore(name, value, value, withscores=withscores, score_cast_func=score_cast_func).execute()
+        return self.__list_substractor(lte, eq)
+
+    def zlte(self, name, value, withscores=False, score_cast_func=float):
+        """
+        Return a range of values from the sorted set ``name`` with scores (``-inf`` < score <= ``value``).
+
+        ``withscores`` indicates to return the scores along with the values.
+        The return type is a list of (value, score) pairs.
+
+        ``score_cast_func`` a callable used to cast the score return value.
+        """
+        return self.zrangebyscore(name, '-inf', value, withscores=withscores, score_cast_func=score_cast_func)
+
+    def zuniquerank(self, name, value):
+        """
+        Return a unique 0-based value indicating the rank of ``value`` in sorted set ``name``.
+        """
+        score = self.zscore(name, value)
+        if not score:
+            return
+        return len(self.zlt(name, score))
+
+    def zuniquerevrank(self, name, value):
+        """
+        Return a unique 0-based value indicating the descending rank of ``value`` in sorted set ``name``.
+        """
+        score = self.zscore(name, value)
+        if not score:
+            return
+        return len(self.zgt(name, score))
+
+    def zmax(self, name, withscores=False, score_cast_func=float):
+        """
+        Return ``max`` value from sorted set ``name``.
+
+        ``withscores`` indicates to return the scores along with the values.
+        The return type is a list of (value, score) pairs.
+
+        ``score_cast_func`` a callable used to cast the score return value.
+        """
+        try:
+            return self.zrevrange(name, 0, 0, withscores=withscores, score_cast_func=score_cast_func)[0]
+        except IndexError:
+            return
+
+    def zmin(self, name, withscores=False, score_cast_func=float):
+        """
+        Return ``min`` value from sorted set ``name``.
+
+        ``withscores`` indicates to return the scores along with the values.
+        The return type is a list of (value, score) pairs.
+
+        ``score_cast_func`` a callable used to cast the score return value.
+        """
+        try:
+            return self.zrange(name, 0, 0, withscores=withscores, score_cast_func=score_cast_func)[0]
+        except IndexError:
+            return
+
     def __timestamps(self, desc=False):
         stamp = int(time.time() * 1000)
         return self.__max_timestamp - stamp if desc else stamp

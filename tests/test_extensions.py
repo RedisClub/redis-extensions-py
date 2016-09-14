@@ -112,3 +112,57 @@ class TestRedisExtensionsCommands(object):
     def test_trim_rpush(self, r):
         r.trim_rpush('a', 3, *range(10))
         assert r.llen('a') == 3
+
+    def lpush_ex(self, r):
+        pass
+
+    def lrange_ex(self, r):
+        pass
+
+    def test_zgt(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        result = r.zgt('a', 1)
+        assert len(result) == 4
+
+    def test_zgte(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        result = r.zgte('a', 1)
+        assert len(result) == 6
+
+    def test_zlt(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        result = r.zlt('a', 3)
+        assert len(result) == 4
+
+    def test_zlte(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        result = r.zlte('a', 3)
+        assert len(result) == 6
+
+    def test_zuniquerank(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.zuniquerank('a', 'x') == 0
+        assert r.zuniquerank('a', 'xx') == 0
+        assert r.zuniquerank('a', 'y') == 2
+        assert r.zuniquerank('a', 'yy') == 2
+        assert r.zuniquerank('a', 'z') == 4
+        assert r.zuniquerank('a', 'zz') == 4
+
+    def test_zuniquerevrank(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.zuniquerevrank('a', 'x') == 4
+        assert r.zuniquerevrank('a', 'xx') == 4
+        assert r.zuniquerevrank('a', 'y') == 2
+        assert r.zuniquerevrank('a', 'yy') == 2
+        assert r.zuniquerevrank('a', 'z') == 0
+        assert r.zuniquerevrank('a', 'zz') == 0
+
+    def test_zmax(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.zmax('a') == 'zz'
+        assert r.zmax('a', withscores=True) == ('zz', 3.0)
+
+    def test_zmin(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.zmin('a') == 'x'
+        assert r.zmin('a', withscores=True) == ('x', 1.0)
