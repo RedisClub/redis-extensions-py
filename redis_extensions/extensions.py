@@ -25,8 +25,8 @@ class StrictRedisExtensions(StrictRedis):
     """
 
     def __new__(cls, *args, **kwargs):
-        cls.__rate = 10000000000000  # 10 ** 13,
-        cls.__max_timestamp = 9999999999999
+        cls.rate = 10000000000000  # 10 ** 13,
+        cls.max_timestamp = 9999999999999
         return super(StrictRedisExtensions, cls).__new__(cls, *args, **kwargs)
 
     # Keys Section
@@ -288,15 +288,15 @@ class StrictRedisExtensions(StrictRedis):
 
     def __timestamps(self, desc=False):
         stamp = int(time.time() * 1000)
-        return self.__max_timestamp - stamp if desc else stamp
+        return self.max_timestamp - stamp if desc else stamp
 
     def __stampscore(self, score, desc=False):
-        return score * self.__rate + self.__timestamps(desc)
+        return score * self.rate + self.__timestamps(desc)
 
     def rawscore(self, score):
         if not score:
             return 0.0
-        return float(int(float(score) / self.__rate))
+        return float(int(float(score) / self.rate))
 
     def zaddwithstamps(self, name, *args, **kwargs):
         desc = 'desc' in kwargs and kwargs.pop('desc')
