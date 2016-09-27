@@ -174,3 +174,9 @@ class TestRedisExtensionsCommands(object):
         r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
         assert r.zmin('a') == 'x'
         assert r.zmin('a', withscores=True) == ('x', 1.0)
+
+    def test_zrawscore(self, r):
+        r.zaddwithstamps('a', x=1)
+        assert r.zrawscore('a', 'x') == 1
+        r.zincrbywithstamps('a', 'x', -1)
+        assert r.zrawscore('a', 'x') == 0

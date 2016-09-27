@@ -302,12 +302,18 @@ class StrictRedisExtensions(StrictRedis):
         desc = 'desc' in kwargs and kwargs.pop('desc')
         pieces = [item if index % 2 else self.__stampscore(item, desc) for index, item in enumerate(args)]
         for pair in iteritems(kwargs):
-            pieces.append(self.__timestamps(pair[1], desc))
+            pieces.append(self.__stampscore(pair[1], desc))
             pieces.append(pair[0])
         return self.zadd(name, *pieces)
 
     def zincrbywithstamps(self, name, value, amount=1, desc=False):
         return self.zadd(name, self.__stampscore(self.rawscore(self.zscore(name, value)) + amount, desc), value)
+
+    def zrawscore(self, name, value):
+        """
+        Return the raw score of element ``value`` in sorted set ``name``
+        """
+        return self.rawscore(self.zscore(name, value))
 
     # Locks Section
     def __acquire_lock(self, lockname, acquire_timeout=10):
