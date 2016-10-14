@@ -20,6 +20,20 @@ class TestRedisExtensionsCommands(object):
         assert result == 2
         assert not r.exists('a:x')
         assert not r.exists('a:y')
+        # Keys Count
+        r['a:x'] = 'foo'
+        r['a:y'] = 'bar'
+        result = r.delete_keys('a:*', count=1)
+        assert result == 2
+        assert not r.exists('a:x')
+        assert not r.exists('a:y')
+        # Scan_iter Count
+        r['a:x'] = 'foo'
+        r['a:y'] = 'bar'
+        result = r.delete_keys('a:*', iter=True, count=1)
+        assert result == 2
+        assert not r.exists('a:x')
+        assert not r.exists('a:y')
 
     def test_get_multi(self, r):
         r['a'] = 'foo'

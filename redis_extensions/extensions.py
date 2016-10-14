@@ -35,8 +35,17 @@ class StrictRedisExtensions(StrictRedis):
         Delete a list of keys matching ``pattern``.
 
         ``iter`` if set to True, will ``scan_iter`` first then ``delete``, else will ``keys`` first then ``delete``.
+        ``count`` allows for hint the minimum number of returns, ``iter`` if set to True, else the maximum number to delete once.
+
+        Warning: ``iter`` if set to True, ``scan_iter`` will be very very very slow when keys' amount very large.
         """
-        return self.delete(*(self.scan_iter(pattern, count) if iter else self.keys(pattern)))
+        dels = 0
+        while True:
+            try:
+                dels += self.delete(*(self.scan_iter(pattern, count) if iter else self.keys(pattern)[:count]))
+            except ResponseError:
+                break
+        return dels
 
     # Strings Section
     def get_multi(self, *names):
