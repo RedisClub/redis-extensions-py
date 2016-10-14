@@ -45,6 +45,8 @@ class StrictRedisExtensions(StrictRedis):
                 dels += self.delete(*(self.scan_iter(pattern, count) if iter else self.keys(pattern)[:count]))
             except ResponseError:
                 break
+            if count is None:
+                break
         return dels
 
     # Strings Section
