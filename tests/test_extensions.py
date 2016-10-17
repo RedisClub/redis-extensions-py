@@ -35,6 +35,18 @@ class TestRedisExtensionsCommands(object):
         assert not r.exists('a:x')
         assert not r.exists('a:y')
 
+    def test_incr_limit(self, r):
+        assert r.incr_limit('a') == 1
+        assert r.incr_limit('a', 5) == 6
+        assert r.incr_limit('a', 10, 10) == 10
+        assert r.incr_limit('a', 10, 10, 12) == 12
+
+    def test_decr_limit(self, r):
+        assert r.decr_limit('a') == -1
+        assert r.decr_limit('a', 5) == -6
+        assert r.decr_limit('a', 10, -10) == -10
+        assert r.decr_limit('a', 10, -10, -12) == -12
+
     def test_get_multi(self, r):
         r['a'] = 'foo'
         r['b'] = 'bar'

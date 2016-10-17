@@ -49,6 +49,32 @@ class StrictRedisExtensions(StrictRedis):
                 break
         return dels
 
+    def incr_limit(self, name, amount=1, limit=None, value=None):
+        """
+        Increments the value of ``key`` by ``amount``. If no key exists, the value will be initialized as ``amount``.
+        """
+        locked = self.__acquire_lock(name)
+        if not locked:
+            return None
+        amount = self.incr(name, amount)
+        if limit and amount > limit:
+            amount = self.decr(name, amount - (value or limit))
+        self.__release_lock(name, locked)
+        return amount
+
+    def decr_limit(self, name, amount=1, limit=None, value=None):
+        """
+        Decrements the value of ``key`` by ``amount``. If no key exists, the value will be initialized as 0 - ``amount``.
+        """
+        locked = self.__acquire_lock(name)
+        if not locked:
+            return None
+        amount = self.decr(name, amount)
+        if limit and amount < limit:
+            amount = self.decr(name, amount - (value or limit))
+        self.__release_lock(name, locked)
+        return amount
+
     # Strings Section
     def get_multi(self, *names):
         """
@@ -340,7 +366,7 @@ class StrictRedisExtensions(StrictRedis):
         return False
 
     def __release_lock(self, lockname, identifier):
-        pipe = self.pipeline(True)
+        pipe = self.pipeline()
         lockname = 'lock:' + lockname
 
         while True:
