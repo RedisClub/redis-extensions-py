@@ -53,26 +53,26 @@ class StrictRedisExtensions(StrictRedis):
         """
         Increments the value of ``key`` by ``amount``. If no key exists, the value will be initialized as ``amount``.
         """
-        locked = self.__acquire_lock(name)
+        locked = self.acquire_lock(name)
         if not locked:
             return None
         amount = self.incr(name, amount)
         if limit and amount > limit:
             amount = self.decr(name, amount - (value or limit))
-        self.__release_lock(name, locked)
+        self.release_lock(name, locked)
         return amount
 
     def decr_limit(self, name, amount=1, limit=None, value=None):
         """
         Decrements the value of ``key`` by ``amount``. If no key exists, the value will be initialized as 0 - ``amount``.
         """
-        locked = self.__acquire_lock(name)
+        locked = self.acquire_lock(name)
         if not locked:
             return None
         amount = self.decr(name, amount)
         if limit and amount < limit:
             amount = self.decr(name, amount - (value or limit))
-        self.__release_lock(name, locked)
+        self.release_lock(name, locked)
         return amount
 
     # Strings Section
@@ -353,7 +353,7 @@ class StrictRedisExtensions(StrictRedis):
         return self.rawscore(self.zscore(name, value))
 
     # Locks Section
-    def __acquire_lock(self, lockname, acquire_timeout=10):
+    def acquire_lock(self, lockname, acquire_timeout=10):
         identifier = str(uuid.uuid4())
 
         end = time.time() + acquire_timeout
@@ -365,7 +365,7 @@ class StrictRedisExtensions(StrictRedis):
 
         return False
 
-    def __release_lock(self, lockname, identifier):
+    def release_lock(self, lockname, identifier):
         pipe = self.pipeline()
         lockname = 'lock:' + lockname
 
@@ -429,7 +429,7 @@ class StrictRedisExtensions(StrictRedis):
             item = item[0][0]
             identifier, queue, name, args = json.loads(item)
 
-            locked = self.__acquire_lock(identifier)
+            locked = self.acquire_lock(identifier)
             if not locked:
                 continue
 
@@ -440,4 +440,4 @@ class StrictRedisExtensions(StrictRedis):
             if self.zrem(delayed, item):
                 self.rpush('queue:' + queue, item)
 
-            self.__release_lock(identifier, locked)
+            self.release_lock(identifier, locked)
