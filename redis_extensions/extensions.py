@@ -10,11 +10,29 @@ import uuid
 from redis import StrictRedis
 from redis._compat import iteritems
 from redis.exceptions import ResponseError, WatchError
+from TimeConvert import TimeConvert as tc
 
 
 logger = logging.getLogger('redis_extensions')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
+
+
+REDIS_EXTENSIONS_KEY_PREFIX = 'redis:extensions:'
+
+
+class MetaDelKwargs(type):
+    """
+    Pass keyword argument only to __new__() and never further it to __init__()?
+
+    See: http://stackoverflow.com/questions/14755754/pass-keyword-argument-only-to-new-and-never-further-it-to-init
+    """
+    def __call__(cls, *args, **kwargs):
+        obj = cls.__new__(cls, *args, **kwargs)
+        if 'timezone' in kwargs:
+            del kwargs['timezone']
+        obj.__init__(*args, **kwargs)
+        return obj
 
 
 class StrictRedisExtensions(StrictRedis):
@@ -24,9 +42,13 @@ class StrictRedisExtensions(StrictRedis):
     Support all implementations of StrictRedis and Realize some frequently used functions.
     """
 
+    __metaclass__ = MetaDelKwargs
+
     def __new__(cls, *args, **kwargs):
         cls.rate = 10000000000000  # 10 ** 13,
         cls.max_timestamp = 9999999999999
+        cls.timezone = kwargs.pop('timezone', None)
+        tc.__init__(timezone=cls.timezone)
         return super(StrictRedisExtensions, cls).__new__(cls, *args, **kwargs)
 
     # Keys Section
@@ -355,20 +377,16 @@ class StrictRedisExtensions(StrictRedis):
     # Locks Section
     def acquire_lock(self, lockname, acquire_timeout=10):
         identifier = str(uuid.uuid4())
-
         end = time.time() + acquire_timeout
         while time.time() < end:
-            if self.setnx('lock:' + lockname, identifier):
+            if self.setnx(REDIS_EXTENSIONS_KEY_PREFIX + 'lock:' + lockname, identifier):
                 return identifier
-
             time.sleep(.001)
-
         return False
 
     def release_lock(self, lockname, identifier):
         pipe = self.pipeline()
-        lockname = 'lock:' + lockname
-
+        lockname = REDIS_EXTENSIONS_KEY_PREFIX + 'lock:' + lockname
         while True:
             try:
                 pipe.watch(lockname)
@@ -377,16 +395,61 @@ class StrictRedisExtensions(StrictRedis):
                     pipe.delete(lockname)
                     pipe.execute()
                     return True
-
                 pipe.unwatch()
                 break
             except WatchError:
                 pass
-
         return False
 
+    # SignIns Section
+    def __get_signin_info(self, signname):
+        """
+        signin_info:
+            signin_date
+            signin_days
+            signin_total_days
+            signin_longest_days
+        """
+        name = '{}signin:info:{}'.format(REDIS_EXTENSIONS_KEY_PREFIX, signname)
+        # Signin Info
+        signin_info = json.loads(self.get(name) or '{}')
+        # Last Signin Date, Format ``%Y-%m-%d``
+        last_signin_date = signin_info.get('signin_date', '1988-06-15')
+        # Today Local Date, Format ``%Y-%m-%d``
+        signin_date = tc.local_string(format='%Y-%m-%d')
+        # Delta Days between ``Last Signin Date`` and ``Today Local Date``
+        delta_days = tc.string_delta(signin_date, last_signin_date, format='%Y-%m-%d')['days']
+        return name, signin_info, signin_date, last_signin_date, delta_days
+
+    def signin(self, signname):
+        name, signin_info, signin_date, _, delta_days = self.__get_signin_info(signname)
+        # Today Unsigned, To Signin
+        if delta_days != 0:
+            # If Uncontinuous
+            if delta_days != 1:
+                signin_info['signin_days'] = 0
+            # Update Signin Info
+            signin_info['signin_date'] = signin_date
+            signin_info['signin_days'] = signin_info.get('signin_days', 0) + 1
+            signin_info['signin_total_days'] = signin_info.get('signin_total_days', 0) + 1
+            signin_info['signin_longest_days'] = max(signin_info.get('signin_longest_days', 0), signin_info['signin_days'])
+            self.set(name, json.dumps(signin_info))
+        return dict(signin_info, signed_today=True)
+
+    def signin_status(self, signname):
+        _, signin_info, _, last_signin_date, delta_days = self.__get_signin_info(signname)
+        if delta_days == 0:  # Today Signed
+            return dict(signin_info, signed_today=True)
+        return {
+            'signed_today': False,
+            'signin_date': last_signin_date,
+            'signin_days': 0 if delta_days != 1 else signin_info.get('signin_days', 0),
+            'signin_total_days': signin_info.get('signin_total_days', 0),
+            'signin_longest_days': signin_info.get('signin_longest_days', 0),
+        }
+
     # Delay Tasks Section
-    def execute_later(self, queue, name, args=None, delayed='delayed:default', delay=0):
+    def execute_later(self, queue, name, args=None, delayed=REDIS_EXTENSIONS_KEY_PREFIX + 'delayed:default', delay=0):
         identifier = str(uuid.uuid4())
 
         item = json.dumps([identifier, queue, name, args])
@@ -394,7 +457,7 @@ class StrictRedisExtensions(StrictRedis):
         if delay > 0:
             self.zadd(delayed, time.time() + delay, item)
         else:
-            self.rpush('queue:' + queue, item)
+            self.rpush(REDIS_EXTENSIONS_KEY_PREFIX + 'queue:' + queue, item)
 
         return identifier
 
@@ -409,7 +472,7 @@ class StrictRedisExtensions(StrictRedis):
             logger.error(e)
             return None
 
-    def poll_queue(self, callbacks={}, delayed='delayed:default'):
+    def poll_queue(self, callbacks={}, delayed=REDIS_EXTENSIONS_KEY_PREFIX + 'delayed:default'):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
@@ -438,6 +501,6 @@ class StrictRedisExtensions(StrictRedis):
                 callbacks[queue](name, args)
 
             if self.zrem(delayed, item):
-                self.rpush('queue:' + queue, item)
+                self.rpush(REDIS_EXTENSIONS_KEY_PREFIX + 'queue:' + queue, item)
 
             self.release_lock(identifier, locked)
