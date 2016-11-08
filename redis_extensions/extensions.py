@@ -434,18 +434,19 @@ class StrictRedisExtensions(StrictRedis):
             signin_info['signin_total_days'] = signin_info.get('signin_total_days', 0) + 1
             signin_info['signin_longest_days'] = max(signin_info.get('signin_longest_days', 0), signin_info['signin_days'])
             self.set(name, json.dumps(signin_info))
-        return dict(signin_info, signed_today=True)
+        return dict(signin_info, signed_today=True, delta_days=delta_days)
 
     def signin_status(self, signname):
         _, signin_info, _, last_signin_date, delta_days = self.__get_signin_info(signname)
         if delta_days == 0:  # Today Signed
-            return dict(signin_info, signed_today=True)
+            return dict(signin_info, signed_today=True, delta_days=delta_days)
         return {
             'signed_today': False,
             'signin_date': last_signin_date,
             'signin_days': 0 if delta_days != 1 else signin_info.get('signin_days', 0),
             'signin_total_days': signin_info.get('signin_total_days', 0),
             'signin_longest_days': signin_info.get('signin_longest_days', 0),
+            'delta_days': delta_days,
         }
 
     # Delay Tasks Section
