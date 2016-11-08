@@ -147,6 +147,22 @@ class TestRedisExtensionsCommands(object):
         r.trim_rpush('a', 3, *range(10))
         assert r.llen('a') == 3
 
+    def test_delete_lpush(self, r):
+        result = r.delete_lpush('a', *range(10))
+        assert result[0] == 10
+        assert not result[1]
+        result = r.delete_lpush('a', *range(10))
+        assert result[0] == 10
+        assert result[1]
+
+    def test_delete_rpush(self, r):
+        result = r.delete_rpush('a', *range(10))
+        assert result[0] == 10
+        assert not result[1]
+        result = r.delete_rpush('a', *range(10))
+        assert result[0] == 10
+        assert result[1]
+
     def lpush_ex(self, r):
         pass
 

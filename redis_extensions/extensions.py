@@ -171,7 +171,7 @@ class StrictRedisExtensions(StrictRedis):
 
     def multi_lpop(self, name, num):
         """
-        LPop multi items of the list ``name``.
+        Pop multi items from the head of the list ``name``.
         """
         if num < 0:
             raise ValueError('The num argument should not be negative')
@@ -179,7 +179,7 @@ class StrictRedisExtensions(StrictRedis):
 
     def multi_rpop(self, name, num):
         """
-        RPop multi items of the list ``name``.
+        Pop multi items from the tail of the list ``name``.
         """
         if num < 0:
             raise ValueError('The num argument should not be negative')
@@ -193,7 +193,7 @@ class StrictRedisExtensions(StrictRedis):
 
     def multi_lpop_delete(self, name, num):
         """
-        LPop multi items of the list ``name``.
+        Pop multi items from the head of the list ``name``.
         Then delete the list ``name``
         """
         if num < 0:
@@ -202,7 +202,7 @@ class StrictRedisExtensions(StrictRedis):
 
     def multi_rpop_delete(self, name, num):
         """
-        RPop multi items of the list ``name``.
+        Pop multi items from the tail of the list ``name``.
         Then delete the list ``name``
         """
         if num < 0:
@@ -217,14 +217,14 @@ class StrictRedisExtensions(StrictRedis):
 
     def trim_lpush(self, name, num, *values):
         """
-        LPush ``values`` onto the head of the list ``name``.
+        Push ``values`` onto the head of the list ``name``.
         Limit ``num`` from the head of the list ``name``.
         """
         return self.pipeline().lpush(name, *values).ltrim(name, 0, num - 1).llen(name).execute()
 
     def trim_rpush(self, name, num, *values):
         """
-        RPush ``values`` onto the tail of the list ``name``.
+        Push ``values`` onto the tail of the list ``name``.
         Limit ``num`` from the tail of the list ``name``.
         """
         return self.pipeline().rpush(name, *values).ltrim(name, -num, - 1).llen(name).execute()
@@ -234,6 +234,26 @@ class StrictRedisExtensions(StrictRedis):
         Alias for trim_lpush.
         """
         return self.trim_lpush(name, num, *values)
+
+    def delete_lpush(self, name, *values):
+        """
+        Delete key specified by ``name``.
+        Push ``values`` onto the head of the list ``name``.
+        """
+        return self.pipeline().delete(name).lpush(name, *values).execute()[::-1]
+
+    def delete_rpush(self, name, *values):
+        """
+        Delete key specified by ``name``.
+        Push ``values`` onto the tail of the list ``name``.
+        """
+        return self.pipeline().delete(name).rpush(name, *values).execute()[::-1]
+
+    def delete_push(self, name, *values):
+        """
+        Alias for delete_lpush.
+        """
+        return self.delete_lpush(name, *values)
 
     def lpush_ex(self, name, ex_time, value):
         """
