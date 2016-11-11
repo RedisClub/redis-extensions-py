@@ -126,6 +126,15 @@ class StrictRedisExtensions(StrictRedis):
         except ResponseError:
             return [None, False]
 
+    def getsetex(self, name, time, value):
+        """
+        Set the value of key ``name`` to ``value`` that expires in ``time`` seconds
+        and returns the old value at key ``name`` atomically.
+        ``time`` can be represented by an integer or a Python
+        timedelta object.
+        """
+        return self.pipeline().getset(name, value).expire(name, time).execute()[0]
+
     def get_or_set(self, name, value=None):
         """
         Return the value at key ``name``, or Set and return if the key doesn't exist.

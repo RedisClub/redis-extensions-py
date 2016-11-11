@@ -70,6 +70,12 @@ class TestRedisExtensionsCommands(object):
         assert result[0] == 'foo'
         assert r.exists('a_del')
 
+    def test_getsetex(self, r):
+        assert r.getsetex('a', 60, 'foo') is None
+        assert 0 < r.ttl('a') <= 60
+        assert r.getsetex('a', 60, 'bar') == 'foo'
+        assert 0 < r.ttl('a') <= 60
+
     def test_get_or_set(self, r):
         result = r.get_or_set('a', 'foo')
         assert isinstance(result, list)
