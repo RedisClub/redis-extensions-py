@@ -109,15 +109,13 @@ class StrictRedisExtensions(StrictRedis):
 
     def get_delete(self, name):
         """
-        Return the value at key ``name``.
-        Delete key ``name``.
+        Return the value at key ``name`` & Delete key ``name``.
         """
         return self.pipeline().get(name).delete(name).execute()
 
     def get_rename(self, name, suffix='del'):
         """
-        Return the value at key ``name``.
-        Rename key ``name`` to ``name_suffix``.
+        Return the value at key ``name`` & Rename key ``name`` to ``name_suffix``.
 
         ``suffix`` for rename key ``name``, default ``del``.
         """
@@ -128,10 +126,9 @@ class StrictRedisExtensions(StrictRedis):
 
     def getsetex(self, name, time, value):
         """
-        Set the value of key ``name`` to ``value`` that expires in ``time`` seconds
-        and returns the old value at key ``name`` atomically.
-        ``time`` can be represented by an integer or a Python
-        timedelta object.
+        Set the value of key ``name`` to ``value`` that expires in ``time`` seconds & Returns the old value at key ``name`` atomically.
+
+        ``time`` can be represented by an integer or a Python timedelta object.
         """
         return self.pipeline().getset(name, value).expire(name, time).execute()[0]
 
@@ -202,8 +199,7 @@ class StrictRedisExtensions(StrictRedis):
 
     def multi_lpop_delete(self, name, num):
         """
-        Pop multi items from the head of the list ``name``.
-        Then delete the list ``name``
+        Pop multi items from the head of the list ``name`` & Delete the list ``name``
         """
         if num < 0:
             raise ValueError('The num argument should not be negative')
@@ -211,8 +207,7 @@ class StrictRedisExtensions(StrictRedis):
 
     def multi_rpop_delete(self, name, num):
         """
-        Pop multi items from the tail of the list ``name``.
-        Then delete the list ``name``
+        Pop multi items from the tail of the list ``name`` & Delete the list ``name``
         """
         if num < 0:
             raise ValueError('The num argument should not be negative')
@@ -226,15 +221,13 @@ class StrictRedisExtensions(StrictRedis):
 
     def trim_lpush(self, name, num, *values):
         """
-        Push ``values`` onto the head of the list ``name``.
-        Limit ``num`` from the head of the list ``name``.
+        Push ``values`` onto the head of the list ``name`` & Limit ``num`` from the head of the list ``name``.
         """
         return self.pipeline().lpush(name, *values).ltrim(name, 0, num - 1).llen(name).execute()
 
     def trim_rpush(self, name, num, *values):
         """
-        Push ``values`` onto the tail of the list ``name``.
-        Limit ``num`` from the tail of the list ``name``.
+        Push ``values`` onto the tail of the list ``name`` & Limit ``num`` from the tail of the list ``name``.
         """
         return self.pipeline().rpush(name, *values).ltrim(name, -num, - 1).llen(name).execute()
 
@@ -246,15 +239,13 @@ class StrictRedisExtensions(StrictRedis):
 
     def delete_lpush(self, name, *values):
         """
-        Delete key specified by ``name``.
-        Push ``values`` onto the head of the list ``name``.
+        Delete key specified by ``name`` & Push ``values`` onto the head of the list ``name``.
         """
         return self.pipeline().delete(name).lpush(name, *values).execute()[::-1]
 
     def delete_rpush(self, name, *values):
         """
-        Delete key specified by ``name``.
-        Push ``values`` onto the tail of the list ``name``.
+        Delete key specified by ``name`` & Push ``values`` onto the tail of the list ``name``.
         """
         return self.pipeline().delete(name).rpush(name, *values).execute()[::-1]
 
