@@ -18,7 +18,7 @@ logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
 
-REDIS_EXTENSIONS_KEY_PREFIX = 'redis:extensions:'
+KEY_PREFIX = 'redis:extensions:'  # Prefix of redis-extensions used key
 
 
 class MetaDelKwargs(type):
@@ -408,14 +408,14 @@ class StrictRedisExtensions(StrictRedis):
         identifier = str(uuid.uuid4())
         end = time.time() + acquire_timeout
         while time.time() < end:
-            if self.setnx(REDIS_EXTENSIONS_KEY_PREFIX + 'lock:' + lockname, identifier):
+            if self.setnx(KEY_PREFIX + 'lock:' + lockname, identifier):
                 return identifier
             time.sleep(.001)
         return False
 
     def release_lock(self, lockname, identifier):
         pipe = self.pipeline()
-        lockname = REDIS_EXTENSIONS_KEY_PREFIX + 'lock:' + lockname
+        lockname = KEY_PREFIX + 'lock:' + lockname
         while True:
             try:
                 pipe.watch(lockname)
@@ -439,7 +439,7 @@ class StrictRedisExtensions(StrictRedis):
             signin_total_days
             signin_longest_days
         """
-        name = '{}signin:info:{}'.format(REDIS_EXTENSIONS_KEY_PREFIX, signname)
+        name = '{}signin:info:{}'.format(KEY_PREFIX, signname)
         # Signin Info
         signin_info = json.loads(self.get(name) or '{}')
         # Last Signin Date, Format ``%Y-%m-%d``
@@ -479,7 +479,7 @@ class StrictRedisExtensions(StrictRedis):
         }
 
     # Delay Tasks Section
-    def execute_later(self, queue, name, args=None, delayed=REDIS_EXTENSIONS_KEY_PREFIX + 'delayed:default', delay=0):
+    def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):
         identifier = str(uuid.uuid4())
 
         item = json.dumps([identifier, queue, name, args])
@@ -487,7 +487,7 @@ class StrictRedisExtensions(StrictRedis):
         if delay > 0:
             self.zadd(delayed, time.time() + delay, item)
         else:
-            self.rpush(REDIS_EXTENSIONS_KEY_PREFIX + 'queue:' + queue, item)
+            self.rpush(KEY_PREFIX + 'queue:' + queue, item)
 
         return identifier
 
@@ -502,7 +502,7 @@ class StrictRedisExtensions(StrictRedis):
             logger.error(e)
             return None
 
-    def poll_queue(self, callbacks={}, delayed=REDIS_EXTENSIONS_KEY_PREFIX + 'delayed:default'):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
@@ -524,6 +524,9 @@ class StrictRedisExtensions(StrictRedis):
 
             locked = self.acquire_lock(identifier)
             if not locked:
+                # Call ``unlocked_warning_func`` if exists when ``acquire_lock`` fails
+                if unlocked_warning_func:
+                    unlocked_warning_func(queue, name, args)
                 continue
 
             # Callbacks
@@ -531,6 +534,6 @@ class StrictRedisExtensions(StrictRedis):
                 callbacks[queue](name, args)
 
             if self.zrem(delayed, item):
-                self.rpush(REDIS_EXTENSIONS_KEY_PREFIX + 'queue:' + queue, item)
+                self.rpush(KEY_PREFIX + 'queue:' + queue, item)
 
             self.release_lock(identifier, locked)
