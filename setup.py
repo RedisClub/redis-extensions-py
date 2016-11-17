@@ -13,7 +13,7 @@ setup(
     description='Redis-extensions is a collection of custom extensions for Redis-py.',
     long_description=open('README.rst').read(),
 
-    url='https://github.com/Brightcells/redis-extensions-py',
+    url='https://github.com/redisclub/redis-extensions-py',
 
     author='Hackathon',
     author_email='kimi.huang@brightcells.com',
