@@ -169,11 +169,19 @@ class TestRedisExtensionsCommands(object):
         assert result[0] == 10
         assert result[1]
 
-    def lpush_ex(self, r):
+    def test_lpush_ex(self, r):
         pass
 
-    def lrange_ex(self, r):
+    def test_lrange_ex(self, r):
         pass
+
+    def test_delete_sadd(self, r):
+        result = r.delete_sadd('a', *range(10))
+        assert result[0] == 10
+        assert not result[1]
+        result = r.delete_sadd('a', *range(10))
+        assert result[0] == 10
+        assert result[1]
 
     def test_zgt(self, r):
         r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
@@ -228,3 +236,9 @@ class TestRedisExtensionsCommands(object):
         assert r.zrawscore('a', 'x') == 1
         r.zincrbywithstamps('a', 'x', -1)
         assert r.zrawscore('a', 'x') == 0
+
+    def test_compatibility(self, r):
+        assert r.incrlimit('a') == 1
+        assert r.incrlimit('a', 5) == 6
+        assert r.incrlimit('a', 10, 10) == 10
+        assert r.incrlimit('a', 10, 10, 12) == 12

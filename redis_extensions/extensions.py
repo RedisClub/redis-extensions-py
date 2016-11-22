@@ -269,6 +269,13 @@ class StrictRedisExtensions(StrictRedis):
         cur_time = time.time()
         return self.pipeline().zrangebyscore(name, cur_time, '+inf').zremrangebyscore(name, 0, cur_time).execute()
 
+    # Sets Section
+    def delete_sadd(self, name, *values):
+        """
+        Delete key specified by ``name`` & Add ``value(s)`` to set ``name``.
+        """
+        return self.pipeline().delete(name).sadd(name, *values).execute()[::-1]
+
     # Sorted Sets Section
     def __list_substractor(self, minuend, subtrahend):
         return [x for x in minuend if x not in subtrahend]
@@ -528,3 +535,31 @@ class StrictRedisExtensions(StrictRedis):
                 self.rpush(KEY_PREFIX + 'queue:' + queue, item)
 
             self.release_lock(identifier, locked)
+
+    # For naming conventions compatibility, order by define
+    deletekeys = delete_keys
+    incrlimit = incr_limit
+    decrlimit = decr_limit
+    getmulti = get_multi
+    getdelete = get_delete
+    getrename = get_rename
+    getorset = get_or_set
+    getorsetex = get_or_setex
+    lpushnx = lpush_nx
+    rpushnx = rpush_nx
+    pushnx = push_nx
+    multilpop = multi_lpop
+    multirpop = multi_rpop
+    multipop = multi_pop
+    multilpopdelete = multi_lpop_delete
+    multirpopdelete = multi_rpop_delete
+    multipopdelete = multi_pop_delete
+    trimlpush = trim_lpush
+    trimrpush = trim_rpush
+    trimpush = trim_push
+    deletelpush = delete_lpush
+    deleterpush = delete_rpush
+    deletepush = delete_push
+    lpushex = lpush_ex
+    lrangeex = lrange_ex
+    deletesadd = delete_sadd
