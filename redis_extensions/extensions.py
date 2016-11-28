@@ -478,8 +478,10 @@ class StrictRedisExtensions(StrictRedis):
         }
 
     # Verification Codes Section
-
     def vcode(self, vname, quota=10, ndigits=6, code_cast_func=str):
+        """
+        Get verification code if not reach quota. Return a 2-item tuple: (verification code, whether reach quota or not).
+        """
         vcode_quota_key = '{}vcode:quota:{}'.format(KEY_PREFIX, vname)
         vcode_num = self.incr(vcode_quota_key)
         if vcode_num == 1:
@@ -492,6 +494,9 @@ class StrictRedisExtensions(StrictRedis):
         return code, False
 
     def vcode_status(self, vname, code):
+        """
+        Check verification code exists or not.
+        """
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
         return self.get(vcode_key) == code
 
