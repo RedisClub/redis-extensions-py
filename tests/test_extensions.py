@@ -237,6 +237,26 @@ class TestRedisExtensionsCommands(object):
         r.zincrbywithstamps('a', 'x', -1)
         assert r.zrawscore('a', 'x') == 0
 
+    # Verification Codes Section
+
+    def test_vcode(self, r):
+        phone = '18888888888'
+        code, overtop = r.vcode(phone)
+        assert len(code) == 6
+        assert not overtop
+        assert r.exists('redis:extensions:vcode:quota:' + phone)
+        code, overtop = r.vcode(phone, quota=1)
+        assert not code
+        assert overtop
+
+    def test_vcode_status(self, r):
+        phone = '18888888888'
+        code, overtop = r.vcode(phone)
+        assert r.vcode_status(phone, code)
+        assert not r.vcode_status(phone, '4321')
+
+    # Compatibility
+
     def test_compatibility(self, r):
         assert r.incrlimit('a') == 1
         assert r.incrlimit('a', 5) == 6
