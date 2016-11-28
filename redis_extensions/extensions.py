@@ -11,6 +11,7 @@ import vcode
 from redis import StrictRedis
 from redis._compat import iteritems
 from redis.exceptions import ResponseError, WatchError
+from redis_extensions.expires import BaseRedisExpires
 from TimeConvert import TimeConvert as tc
 
 
@@ -36,21 +37,28 @@ class MetaDelKwargs(type):
         return obj
 
 
-class StrictRedisExtensions(StrictRedis):
+class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     """
     Extension of [redis-py](https://github.com/andymccurdy/redis-py)'s StrictRedis.
 
     Support all implementations of StrictRedis and Realize some frequently used functions.
     """
 
-    __metaclass__ = MetaDelKwargs
+    # __metaclass__ = MetaDelKwargs
 
-    def __new__(cls, *args, **kwargs):
-        cls.rate = 10000000000000  # 10 ** 13,
-        cls.max_timestamp = 9999999999999
-        cls.timezone = kwargs.pop('timezone', None)
-        tc.__init__(timezone=cls.timezone)
-        return super(StrictRedisExtensions, cls).__new__(cls, *args, **kwargs)
+    # def __new__(cls, *args, **kwargs):
+    #     cls.rate = 10000000000000  # 10 ** 13,
+    #     cls.max_timestamp = 9999999999999
+    #     cls.timezone = kwargs.pop('timezone', None)
+    #     tc.__init__(timezone=cls.timezone)
+    #     return super(StrictRedisExtensions, cls).__new__(cls, *args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        self.rate = 10000000000000  # 10 ** 13,
+        self.max_timestamp = 9999999999999
+        self.timezone = kwargs.pop('timezone', None)
+        tc.__init__(timezone=self.timezone)
+        super(StrictRedisExtensions, self).__init__(*args, **kwargs)
 
     # Keys Section
     def delete_keys(self, pattern='*', iter=False, count=None):
@@ -485,12 +493,12 @@ class StrictRedisExtensions(StrictRedis):
         vcode_quota_key = '{}vcode:quota:{}'.format(KEY_PREFIX, vname)
         vcode_num = self.incr(vcode_quota_key)
         if vcode_num == 1:
-            self.expire(vcode_quota_key, 86400)  # Only can called ``quota`` num within 24 hours.
+            self.expire(vcode_quota_key, self.REDIS_EXPIRED_ONE_DAY)  # Only can called ``quota`` num within 24 hours.
         if vcode_num > quota:
             return '', True
         code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
-        self.setex(vcode_key, 1800, code)
+        self.setex(vcode_key, self.REDIS_EXPIRED_HALF_HOUR, code)
         return code, False
 
     def vcode_status(self, vname, code):
