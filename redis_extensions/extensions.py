@@ -7,6 +7,7 @@ import logging
 import time
 import uuid
 
+import vcode
 from redis import StrictRedis
 from redis._compat import iteritems
 from redis.exceptions import ResponseError, WatchError
@@ -475,6 +476,24 @@ class StrictRedisExtensions(StrictRedis):
             'signin_longest_days': signin_info.get('signin_longest_days', 0),
             'delta_days': delta_days,
         }
+
+    # Verification Codes Section
+
+    def vcode(self, vname, quota=10, ndigits=6, code_cast_func=str):
+        vcode_quota_key = '{}vcode:quota:{}'.format(KEY_PREFIX, vname)
+        vcode_num = self.incr(vcode_quota_key)
+        if vcode_num == 1:
+            self.expire(vcode_quota_key, 86400)  # Only can called ``quota`` num within 24 hours.
+        if vcode_num > quota:
+            return '', True
+        code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
+        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
+        self.setex(vcode_key, 1800, code)
+        return code, False
+
+    def vcode_status(self, vname, code):
+        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
+        return self.get(vcode_key) == code
 
     # Delay Tasks Section
     def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):
