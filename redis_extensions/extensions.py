@@ -285,7 +285,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.pipeline().delete(name).sadd(name, *values).execute()[::-1]
 
-    # Sorted Sets Section
+    # ZSorts(Sorted Sets) Section
     def __list_substractor(self, minuend, subtrahend):
         return [x for x in minuend if x not in subtrahend]
 

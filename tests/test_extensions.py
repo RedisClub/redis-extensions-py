@@ -5,6 +5,19 @@ import pytest
 
 class TestRedisExtensionsCommands(object):
 
+    # Configs Section
+
+    def test_timezone(self, r):
+        assert not r.timezone
+
+    def test_timezone2(self, r2):
+        assert r2.timezone == 'Asia/Shanghai'
+
+    def test_timezone3(self, r3):
+        assert r3.timezone == 'Asia/Shanghai'
+
+    # Keys Section
+
     def test_delete_keys(self, r):
         # Keys
         r['a:x'] = 'foo'
@@ -47,6 +60,8 @@ class TestRedisExtensionsCommands(object):
         assert r.decr_limit('a', 10, -10) == -10
         assert r.decr_limit('a', 10, -10, -12) == -12
 
+    # Strings Section
+
     def test_get_multi(self, r):
         r['a'] = 'foo'
         r['b'] = 'bar'
@@ -86,6 +101,8 @@ class TestRedisExtensionsCommands(object):
         assert isinstance(result, list)
         assert result[0] == 'foo'
         assert 0 < r.ttl('a') <= 60
+
+    # Lists Section
 
     def test_lpush_nx(self, r):
         r.lpush('a', 'foo')
@@ -175,6 +192,8 @@ class TestRedisExtensionsCommands(object):
     def test_lrange_ex(self, r):
         pass
 
+    # Sets Section
+
     def test_delete_sadd(self, r):
         result = r.delete_sadd('a', *range(10))
         assert result[0] == 10
@@ -182,6 +201,8 @@ class TestRedisExtensionsCommands(object):
         result = r.delete_sadd('a', *range(10))
         assert result[0] == 10
         assert result[1]
+
+    # ZSorts(Sorted Sets) Section
 
     def test_zgt(self, r):
         r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
@@ -255,7 +276,7 @@ class TestRedisExtensionsCommands(object):
         assert r.vcode_status(phone, code)
         assert not r.vcode_status(phone, '4321')
 
-    # Compatibility
+    # Compatibility Section
 
     def test_compatibility(self, r):
         assert r.incrlimit('a') == 1
