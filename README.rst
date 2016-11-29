@@ -39,3 +39,22 @@ Usage
     In [8]: r.zrange('sorted_set', 0, 100, withscores=True, score_cast_func=r.rawscore)
     Out[8]: [('b', 2.0), ('a', 2.0)]
 
+
+Solutions
+=========
+
+Locks::
+
+    In [1]: import redis_extensions as redis
+
+    In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+    In [3]: r.acquire_lock('redis_extensions')
+    Out[3]: '026ad2a7-2b58-435f-8ba2-467458a687f1'
+
+    In [4]: r.acquire_lock('redis_extensions')
+    Out[4]: False
+
+    In [5]: r.release_lock('redis_extensions', '026ad2a7-2b58-435f-8ba2-467458a687f1')
+    Out[5]: True
+
