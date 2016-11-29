@@ -258,6 +258,19 @@ class TestRedisExtensionsCommands(object):
         r.zincrbywithstamps('a', 'x', -1)
         assert r.zrawscore('a', 'x') == 0
 
+    # Locks Section
+
+    def test_acquire_lock(self, r):
+        lockname = 'redis_extensions'
+        assert r.acquire_lock(lockname)
+        assert not r.acquire_lock(lockname, acquire_timeout=0.05)
+
+    def test_release_lock(self, r):
+        lockname = 'redis_extensions'
+        identifier = r.acquire_lock(lockname)
+        assert r.release_lock(lockname, identifier)
+        assert not r.release_lock(lockname, identifier)
+
     # Verification Codes Section
 
     def test_vcode(self, r):
