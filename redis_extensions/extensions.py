@@ -23,35 +23,12 @@ logger.setLevel(logging.INFO)
 KEY_PREFIX = 'redis:extensions:'  # Prefix of redis-extensions used key
 
 
-class MetaDelKwargs(type):
-    """
-    Pass keyword argument only to __new__() and never further it to __init__()?
-
-    See: http://stackoverflow.com/questions/14755754/pass-keyword-argument-only-to-new-and-never-further-it-to-init
-    """
-    def __call__(cls, *args, **kwargs):
-        obj = cls.__new__(cls, *args, **kwargs)
-        if 'timezone' in kwargs:
-            del kwargs['timezone']
-        obj.__init__(*args, **kwargs)
-        return obj
-
-
 class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     """
     Extension of [redis-py](https://github.com/andymccurdy/redis-py)'s StrictRedis.
 
     Support all implementations of StrictRedis and Realize some frequently used functions.
     """
-
-    # __metaclass__ = MetaDelKwargs
-
-    # def __new__(cls, *args, **kwargs):
-    #     cls.rate = 10000000000000  # 10 ** 13,
-    #     cls.max_timestamp = 9999999999999
-    #     cls.timezone = kwargs.pop('timezone', None)
-    #     tc.__init__(timezone=cls.timezone)
-    #     return super(StrictRedisExtensions, cls).__new__(cls, *args, **kwargs)
 
     def __init__(self, *args, **kwargs):
         self.rate = 10000000000000  # 10 ** 13,
