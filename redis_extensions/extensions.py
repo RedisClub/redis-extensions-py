@@ -483,7 +483,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         Check verification code exists or not.
         """
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
-        return self.get(vcode_key) == code
+        return self.get(vcode_key) == str(code)
 
     # Delay Tasks Section
     def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):

@@ -287,6 +287,8 @@ class TestRedisExtensionsCommands(object):
         phone = '18888888888'
         code, overtop = r.vcode(phone)
         assert r.vcode_status(phone, code)
+        code, overtop = r.vcode(phone, code_cast_func=int)
+        assert r.vcode_status(phone, code)
         assert not r.vcode_status(phone, '4321')
 
     # Compatibility Section
