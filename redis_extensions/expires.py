@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from redis import StrictRedis
-
 
 class BaseRedisExpires(object):
 
