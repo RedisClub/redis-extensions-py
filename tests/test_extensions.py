@@ -130,6 +130,12 @@ class TestRedisExtensionsCommands(object):
         assert isinstance(result, list)
         assert len(result[0]) == 3
         assert result[-1] == 7
+
+        result = r.multi_lpop('a')
+        assert isinstance(result, list)
+        assert len(result[0]) == 1
+        assert result[-1] == 6
+
         with pytest.raises(ValueError):
             r.multi_lpop('a', -1)
 
@@ -139,6 +145,12 @@ class TestRedisExtensionsCommands(object):
         assert isinstance(result, list)
         assert len(result[0]) == 3
         assert result[-1] == 7
+
+        result = r.multi_rpop('a')
+        assert isinstance(result, list)
+        assert len(result[0]) == 1
+        assert result[-1] == 6
+
         with pytest.raises(ValueError):
             r.multi_rpop('a', -1)
 
@@ -147,8 +159,16 @@ class TestRedisExtensionsCommands(object):
         result = r.multi_lpop_delete('a', 3)
         assert isinstance(result, list)
         assert len(result[0]) == 3
-        assert result[-1] == 1
+        assert result[-1]
         assert not r.exists('a')
+
+        r.rpush('a', *range(10))
+        result = r.multi_lpop_delete('a')
+        assert isinstance(result, list)
+        assert len(result[0]) == 1
+        assert result[-1]
+        assert not r.exists('a')
+
         with pytest.raises(ValueError):
             r.multi_lpop('a', -1)
 
@@ -157,8 +177,16 @@ class TestRedisExtensionsCommands(object):
         result = r.multi_rpop_delete('a', 3)
         assert isinstance(result, list)
         assert len(result[0]) == 3
-        assert result[-1] == 1
+        assert result[-1]
         assert not r.exists('a')
+
+        r.rpush('a', *range(10))
+        result = r.multi_rpop_delete('a')
+        assert isinstance(result, list)
+        assert len(result[0]) == 1
+        assert result[-1]
+        assert not r.exists('a')
+
         with pytest.raises(ValueError):
             r.multi_rpop('a', -1)
 
