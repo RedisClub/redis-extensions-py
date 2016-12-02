@@ -43,7 +43,7 @@ Usage
 Solutions
 =========
 
-Locks::
+Lock::
 
     In [1]: import redis_extensions as redis
 
@@ -100,4 +100,19 @@ Signin::
      u'signin_days': 1,
      u'signin_longest_days': 1,
      u'signin_total_days': 1}
+
+
+Verification Code::
+
+    In [1]: import redis_extensions as redis
+
+    In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+    In [3]: phone = '18888888888'
+
+    In [4]: r.vcode(phone)
+    Out[4]: ('678366', False)
+
+    In [5]: r.vcode_status(phone, '678366')
+    Out[5]: True
 
