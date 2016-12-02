@@ -40,6 +40,34 @@ Usage
     Out[8]: [('b', 2.0), ('a', 2.0)]
 
 
+Expired
+=======
+
+::
+
+    In [1]: from redis_extensions import RedisExpires as exp
+
+    In [2]: exp.REDIS_EXPIRED
+    exp.REDIS_EXPIRED_HALF_HOUR  exp.REDIS_EXPIRED_ONE_HOUR   exp.REDIS_EXPIRED_ONE_WEEK
+    exp.REDIS_EXPIRED_ONE_DAY    exp.REDIS_EXPIRED_ONE_MONTH  exp.REDIS_EXPIRED_ONE_YEAR
+
+    In [2]: exp.REDIS_EXPIRED_ONE_HOUR
+    Out[2]: 3600
+
+    In [3]:
+
+    In [3]: import redis_extensions as redis
+
+    In [4]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+    In [5]: r.REDIS_EXPIRED
+    r.REDIS_EXPIRED_HALF_HOUR  r.REDIS_EXPIRED_ONE_HOUR   r.REDIS_EXPIRED_ONE_WEEK
+    r.REDIS_EXPIRED_ONE_DAY    r.REDIS_EXPIRED_ONE_MONTH  r.REDIS_EXPIRED_ONE_YEAR
+
+    In [5]: r.REDIS_EXPIRED_ONE_HOUR
+    Out[5]: 3600
+
+
 Solutions
 =========
 
