@@ -83,6 +83,22 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.release_lock(name, locked)
         return amount
 
+    def incr_gt(self, name, amount=1, limit=0):
+        amount = self.incr(name, amount)
+        return amount, amount > limit
+
+    def incr_gte(self, name, amount=1, limit=0):
+        amount = self.incr(name, amount)
+        return amount, amount >= limit
+
+    def decr_lt(self, name, amount=1, limit=0):
+        amount = self.decr(name, amount)
+        return amount, amount < limit
+
+    def decr_lte(self, name, amount=1, limit=0):
+        amount = self.decr(name, amount)
+        return amount, amount <= limit
+
     # Strings Section
     def get_multi(self, *names):
         """
@@ -549,6 +565,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     deletekeys = delete_keys
     incrlimit = incr_limit
     decrlimit = decr_limit
+    incrgt = incr_gt
+    incrgte = incr_gte
+    decrlt = decr_lt
+    decrlte = decr_lte
     getmulti = get_multi
     getdelete = get_delete
     getrename = get_rename

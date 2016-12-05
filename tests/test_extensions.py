@@ -60,6 +60,38 @@ class TestRedisExtensionsCommands(object):
         assert r.decr_limit('a', 10, -10) == -10
         assert r.decr_limit('a', 10, -10, -12) == -12
 
+    def test_incr_gt(self, r):
+        amount, gt = r.incr_gt('a')
+        assert amount == 1
+        assert gt
+        amount, gt = r.incr_gt('a', 1, limit=10)
+        assert amount == 2
+        assert not gt
+
+    def test_incr_gte(self, r):
+        amount, gte = r.incr_gte('a', limit=1)
+        assert amount == 1
+        assert gte
+        amount, gte = r.incr_gte('a', 1, limit=10)
+        assert amount == 2
+        assert not gte
+
+    def test_decr_lt(self, r):
+        amount, lt = r.decr_lt('a')
+        assert amount == -1
+        assert lt
+        amount, lt = r.decr_lt('a', 1, limit=-10)
+        assert amount == -2
+        assert not lt
+
+    def test_decr_lte(self, r):
+        amount, lte = r.decr_lte('a', limit=-1)
+        assert amount == -1
+        assert lte
+        amount, lte = r.decr_lte('a', 1, limit=-10)
+        assert amount == -2
+        assert not lte
+
     # Strings Section
 
     def test_get_multi(self, r):
