@@ -60,6 +60,22 @@ class TestRedisExtensionsCommands(object):
         assert r.decr_limit('a', 10, -10) == -10
         assert r.decr_limit('a', 10, -10, -12) == -12
 
+    def test_incr_cmp(self, r):
+        amount, gt = r.incr_cmp('a')
+        assert amount == 1
+        assert gt
+        amount, gt = r.incr_cmp('a', cmp='>')
+        assert amount == 2
+        assert gt
+        amount, ge = r.incr_cmp('a', cmp='>=', limit=3)
+        assert amount == 3
+        assert ge
+        amount, eq = r.incr_cmp('a', cmp='==', limit=4)
+        assert amount == 4
+        assert eq
+        with pytest.raises(ValueError):
+            r.incr_cmp('a', cmp='+')
+
     def test_incr_gt(self, r):
         amount, gt = r.incr_gt('a')
         assert amount == 1
@@ -68,13 +84,37 @@ class TestRedisExtensionsCommands(object):
         assert amount == 2
         assert not gt
 
-    def test_incr_gte(self, r):
-        amount, gte = r.incr_gte('a', limit=1)
+    def test_incr_ge(self, r):
+        amount, ge = r.incr_ge('a', limit=1)
         assert amount == 1
-        assert gte
-        amount, gte = r.incr_gte('a', 1, limit=10)
+        assert ge
+        amount, ge = r.incr_ge('a', 1, limit=10)
         assert amount == 2
-        assert not gte
+        assert not ge
+
+    def test_incr_eq(self, r):
+        amount, eq = r.incr_eq('a', limit=1)
+        assert amount == 1
+        assert eq
+        amount, eq = r.incr_eq('a', 1, limit=10)
+        assert amount == 2
+        assert not eq
+
+    def test_decr_cmp(self, r):
+        amount, lt = r.decr_cmp('a')
+        assert amount == -1
+        assert lt
+        amount, lt = r.decr_cmp('a', cmp='<')
+        assert amount == -2
+        assert lt
+        amount, le = r.decr_cmp('a', cmp='<=', limit=-3)
+        assert amount == -3
+        assert le
+        amount, eq = r.decr_cmp('a', cmp='==', limit=-4)
+        assert amount == -4
+        assert eq
+        with pytest.raises(ValueError):
+            r.decr_cmp('a', cmp='+')
 
     def test_decr_lt(self, r):
         amount, lt = r.decr_lt('a')
@@ -84,13 +124,21 @@ class TestRedisExtensionsCommands(object):
         assert amount == -2
         assert not lt
 
-    def test_decr_lte(self, r):
-        amount, lte = r.decr_lte('a', limit=-1)
+    def test_decr_le(self, r):
+        amount, le = r.decr_le('a', limit=-1)
         assert amount == -1
-        assert lte
-        amount, lte = r.decr_lte('a', 1, limit=-10)
+        assert le
+        amount, le = r.decr_le('a', 1, limit=-10)
         assert amount == -2
-        assert not lte
+        assert not le
+
+    def test_decr_eq(self, r):
+        amount, eq = r.decr_eq('a', limit=-1)
+        assert amount == -1
+        assert eq
+        amount, eq = r.decr_eq('a', 1, limit=-10)
+        assert amount == -2
+        assert not eq
 
     # Strings Section
 

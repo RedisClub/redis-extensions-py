@@ -4,6 +4,7 @@ import datetime
 import importlib
 import json
 import logging
+import re
 import time
 import uuid
 
@@ -83,21 +84,41 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.release_lock(name, locked)
         return amount
 
+    def incr_cmp(self, name, amount=1, cmp='>', limit=0):
+        if not re.match(r'^[><=]+$', cmp):
+            raise ValueError('Cmp Value Incorrect')
+        amount = self.incr(name, amount)
+        return amount, eval('{}{}{}'.format(amount, cmp, limit))
+
     def incr_gt(self, name, amount=1, limit=0):
         amount = self.incr(name, amount)
         return amount, amount > limit
 
-    def incr_gte(self, name, amount=1, limit=0):
+    def incr_ge(self, name, amount=1, limit=0):
         amount = self.incr(name, amount)
         return amount, amount >= limit
+
+    def incr_eq(self, name, amount=1, limit=0):
+        amount = self.incr(name, amount)
+        return amount, amount == limit
+
+    def decr_cmp(self, name, amount=1, cmp='<', limit=0):
+        if not re.match(r'^[><=]+$', cmp):
+            raise ValueError('Cmp Value Incorrect')
+        amount = self.decr(name, amount)
+        return amount, eval('{}{}{}'.format(amount, cmp, limit))
 
     def decr_lt(self, name, amount=1, limit=0):
         amount = self.decr(name, amount)
         return amount, amount < limit
 
-    def decr_lte(self, name, amount=1, limit=0):
+    def decr_le(self, name, amount=1, limit=0):
         amount = self.decr(name, amount)
         return amount, amount <= limit
+
+    def decr_eq(self, name, amount=1, limit=0):
+        amount = self.decr(name, amount)
+        return amount, amount == limit
 
     # Strings Section
     def get_multi(self, *names):
@@ -565,10 +586,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     deletekeys = delete_keys
     incrlimit = incr_limit
     decrlimit = decr_limit
+    incrcmp = incr_cmp
     incrgt = incr_gt
-    incrgte = incr_gte
+    incrge = incr_ge
+    increq = incr_eq
+    decrcmp = decr_cmp
     decrlt = decr_lt
-    decrlte = decr_lte
+    decrle = decr_le
+    decreq = decr_eq
     getmulti = get_multi
     getdelete = get_delete
     getrename = get_rename
