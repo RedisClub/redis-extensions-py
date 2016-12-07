@@ -292,6 +292,21 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         cur_time = time.time()
         return self.pipeline().zrangebyscore(name, cur_time, '+inf').zremrangebyscore(name, 0, cur_time).execute()
 
+    def sorted_pop(self, name, rank=0, sorted_func=None, reverse=True):
+        # Acquire Lock
+        locked = self.acquire_lock(name)
+        # Get Items
+        items = self.lrange(name, 0, -1)
+        # Sort Items
+        sorts = sorted(items, key=sorted_func, reverse=reverse)
+        # Get Item
+        item = sorts[rank]
+        # Remove Item
+        self.lrem(name, -1, item)
+        # Release Lock
+        self.release_lock(name, locked)
+        return item
+
     # Sets Section
     def delete_sadd(self, name, *values):
         """
@@ -616,4 +631,5 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     deletepush = delete_push
     lpushex = lpush_ex
     lrangeex = lrange_ex
+    sortedpop = sorted_pop
     deletesadd = delete_sadd
