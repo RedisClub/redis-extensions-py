@@ -144,14 +144,6 @@ class TestRedisExtensionsCommands(object):
 
     # Strings Section
 
-    def test_get_multi(self, r):
-        r['a'] = 'foo'
-        r['b'] = 'bar'
-        result = r.get_multi('a', 'b')
-        assert isinstance(result, list)
-        assert result[0] == 'foo'
-        assert result[1] == 'bar'
-
     def test_get_delete(self, r):
         result = r.get_delete('a')
         assert isinstance(result, list)

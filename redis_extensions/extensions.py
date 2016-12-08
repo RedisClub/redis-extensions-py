@@ -121,15 +121,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return amount, amount == limit
 
     # Strings Section
-    def get_multi(self, *names):
-        """
-        Return the values at keys ``names``.
-        """
-        pipe = self.pipeline()
-        for name in names:
-            pipe.get(name)
-        return pipe.execute()
-
     def get_delete(self, name):
         """
         Return the value at key ``name`` & Delete key ``name``.
@@ -609,7 +600,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     decrlt = decr_lt
     decrle = decr_le
     decreq = decr_eq
-    getmulti = get_multi
     getdelete = get_delete
     getrename = get_rename
     getorset = get_or_set
