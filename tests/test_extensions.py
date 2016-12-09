@@ -328,9 +328,9 @@ class TestRedisExtensionsCommands(object):
         result = r.zgt('a', 1)
         assert len(result) == 4
 
-    def test_zgte(self, r):
+    def test_zge(self, r):
         r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
-        result = r.zgte('a', 1)
+        result = r.zge('a', 1)
         assert len(result) == 6
 
     def test_zlt(self, r):
@@ -338,10 +338,26 @@ class TestRedisExtensionsCommands(object):
         result = r.zlt('a', 3)
         assert len(result) == 4
 
-    def test_zlte(self, r):
+    def test_zle(self, r):
         r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
-        result = r.zlte('a', 3)
+        result = r.zle('a', 3)
         assert len(result) == 6
+
+    def test_zgtcount(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.zgtcount('a', 1) == 4
+
+    def test_zgecount(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.zgecount('a', 1) == 6
+
+    def test_zltcount(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.zltcount('a', 3) == 4
+
+    def test_zlecount(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.zlecount('a', 3) == 6
 
     def test_zuniquerank(self, r):
         r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)

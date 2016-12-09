@@ -321,7 +321,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         gte, eq = self.pipeline().zrangebyscore(name, value, '+inf', withscores=withscores, score_cast_func=score_cast_func).zrangebyscore(name, value, value, withscores=withscores, score_cast_func=score_cast_func).execute()
         return self.__list_substractor(gte, eq)
 
-    def zgte(self, name, value, withscores=False, score_cast_func=float):
+    def zge(self, name, value, withscores=False, score_cast_func=float):
         """
         Return a range of values from the sorted set ``name`` with scores (``value`` <= score < ``+inf``).
 
@@ -344,7 +344,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         lte, eq = self.pipeline().zrangebyscore(name, '-inf', value, withscores=withscores, score_cast_func=score_cast_func).zrangebyscore(name, value, value, withscores=withscores, score_cast_func=score_cast_func).execute()
         return self.__list_substractor(lte, eq)
 
-    def zlte(self, name, value, withscores=False, score_cast_func=float):
+    def zle(self, name, value, withscores=False, score_cast_func=float):
         """
         Return a range of values from the sorted set ``name`` with scores (``-inf`` < score <= ``value``).
 
@@ -355,6 +355,32 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.zrangebyscore(name, '-inf', value, withscores=withscores, score_cast_func=score_cast_func)
 
+    def zgtcount(self, name, value):
+        """
+        Returns the number of elements in the sorted set at key ``name`` with scores (``value`` < score < ``+inf``).
+        """
+        ge, eq = self.pipeline().zcount(name, value, '+inf').zcount(name, value, value).execute()
+        return ge - eq
+
+    def zgecount(self, name, value):
+        """
+        Returns the number of elements in the sorted set at key ``name`` with scores (``value`` <= score < ``+inf``).
+        """
+        return self.zcount(name, value, '+inf')
+
+    def zltcount(self, name, value):
+        """
+        Returns the number of elements in the sorted set at key ``name`` with scores (``-inf`` < score < ``value``).
+        """
+        le, eq = self.pipeline().zcount(name, '-inf', value).zcount(name, value, value).execute()
+        return le - eq
+
+    def zlecount(self, name, value):
+        """
+        Returns the number of elements in the sorted set at key ``name`` with scores (``-inf`` < score <= ``value``).
+        """
+        return self.zcount(name, '-inf', value)
+
     def zuniquerank(self, name, value):
         """
         Return a unique 0-based value indicating the rank of ``value`` in sorted set ``name``.
@@ -362,7 +388,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         score = self.zscore(name, value)
         if not score:
             return
-        return len(self.zlt(name, score))
+        return self.zltcount(name, score)
 
     def zuniquerevrank(self, name, value):
         """
@@ -371,7 +397,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         score = self.zscore(name, value)
         if not score:
             return
-        return len(self.zgt(name, score))
+        return self.zgtcount(name, score)
 
     def zmax(self, name, withscores=False, score_cast_func=float):
         """
@@ -623,3 +649,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     lrangeex = lrange_ex
     sortedpop = sorted_pop
     deletesadd = delete_sadd
+
+    # For backwards compatibility
+    zgte = zge
+    zlte = zle
