@@ -127,6 +127,6 @@ Out[5]: 3600
   In [4]: r.vcode(phone)
   Out[4]: ('678366', False)
 
-  In [5]: r.vcode_status(phone, '678366')
+  In [5]: r.vcode_exists(phone, '678366')
   Out[5]: True
   ```

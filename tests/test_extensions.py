@@ -423,13 +423,13 @@ class TestRedisExtensionsCommands(object):
         code, overtop = r.vcode(phone, quota=0, ndigits=4)
         assert len(code) == 4
 
-    def test_vcode_status(self, r):
+    def test_vcode_exists(self, r):
         phone = '18888888888'
         code, overtop = r.vcode(phone)
-        assert r.vcode_status(phone, code)
+        assert r.vcode_exists(phone, code)
         code, overtop = r.vcode(phone, code_cast_func=int)
-        assert r.vcode_status(phone, code)
-        assert not r.vcode_status(phone, '4321')
+        assert r.vcode_exists(phone, code)
+        assert not r.vcode_exists(phone, '4321')
 
     # Compatibility Section
 

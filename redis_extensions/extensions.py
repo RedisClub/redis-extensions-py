@@ -558,7 +558,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.setex(vcode_key, ex_time, code)
         return code, False
 
-    def vcode_status(self, vname, code):
+    def vcode_exists(self, vname, code):
         """
         Check verification code exists or not.
         """
@@ -667,8 +667,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     # For rename function
     token = vcode
-    token_status = vcode_status
+    token_exists = vcode_exists
 
     # For backwards compatibility
     zgte = zge
     zlte = zle
+    vcode_status = vcode_exists
