@@ -614,6 +614,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
             self.release_lock(identifier, locked)
 
+    # For rename official function
+    def georem(self, name, *values):
+        return self.zrem(name, *values)
+
     # For naming conventions compatibility, order by define
     deletekeys = delete_keys
     incrlimit = incr_limit

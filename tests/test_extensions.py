@@ -433,3 +433,10 @@ class TestRedisExtensionsCommands(object):
         assert r.incrlimit('a', 5) == 6
         assert r.incrlimit('a', 10, 10) == 10
         assert r.incrlimit('a', 10, 10, 12) == 12
+
+    # For rename official function
+    def test_georem(self, r):
+        r.geoadd('a', 0, 0, 'x')
+        assert r.geopos('a', 'x')
+        r.georem('a', 'x')
+        assert not r.geopos('a', 'x')
