@@ -417,6 +417,11 @@ class TestRedisExtensionsCommands(object):
         code, overtop = r.vcode(phone, quota=1)
         assert not code
         assert overtop
+        code, overtop = r.vcode(phone, quota=0)
+        assert len(code) == 6
+        assert not overtop
+        code, overtop = r.vcode(phone, quota=0, ndigits=4)
+        assert len(code) == 4
 
     def test_vcode_status(self, r):
         phone = '18888888888'

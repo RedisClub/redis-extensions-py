@@ -532,19 +532,30 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         }
 
     # Verification Codes Section
-    def vcode(self, vname, quota=10, ndigits=6, code_cast_func=str):
+    def vcode(self, vname, quota=10, ndigits=6, ex_time=1800, code_cast_func=str):
         """
         Get verification code if not reach quota. Return a 2-item tuple: (verification code, whether reach quota or not).
+
+        ``quota`` indicates limitation of generating code, 0 for limitlessness.
+
+        ``ndigits`` indicates length of generated code.
+
+        ``ex_time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 24 hours.
+
+        ``code_cast_func`` a callable used to cast the code return value.
         """
-        vcode_quota_key = '{}vcode:quota:{}'.format(KEY_PREFIX, vname)
-        vcode_num = self.incr(vcode_quota_key)
-        if vcode_num == 1:
-            self.expire(vcode_quota_key, self.REDIS_EXPIRED_ONE_DAY)  # Only can called ``quota`` num within 24 hours.
-        if vcode_num > quota:
-            return '', True
+        if quota:
+            vcode_quota_key = '{}vcode:quota:{}'.format(KEY_PREFIX, vname)
+            vcode_num = self.incr(vcode_quota_key)
+            if vcode_num == 1:
+                self.expire(vcode_quota_key, self.REDIS_EXPIRED_ONE_DAY)  # Only can called ``quota`` num within 24 hours.
+            if vcode_num > quota:
+                return '', True
         code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
-        self.setex(vcode_key, self.REDIS_EXPIRED_HALF_HOUR, code)
+        if isinstance(ex_time, datetime.timedelta):
+            ex_time = ex_time.seconds + ex_time.days * 24 * 3600
+        self.setex(vcode_key, ex_time, code)
         return code, False
 
     def vcode_status(self, vname, code):
@@ -653,6 +664,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     lrangeex = lrange_ex
     sortedpop = sorted_pop
     deletesadd = delete_sadd
+
+    # For rename function
+    token = vcode
+    token_status = vcode_status
 
     # For backwards compatibility
     zgte = zge
