@@ -130,6 +130,21 @@ Signin::
      u'signin_total_days': 1}
 
 
+Token::
+
+    In [1]: import redis_extensions as redis
+
+    In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+    In [3]: phone = '18888888888'
+
+    In [4]: r.token(phone)
+    Out[4]: '8bde88aa-71e9-4dea-846c-b1684a02b0f5'
+
+    In [5]: r.token_exists(phone, '8bde88aa-71e9-4dea-846c-b1684a02b0f5')
+    Out[5]: True
+
+
 Verification Code::
 
     In [1]: import redis_extensions as redis
