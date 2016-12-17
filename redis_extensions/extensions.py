@@ -531,10 +531,31 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             'delta_days': delta_days,
         }
 
+    # Token
+    def token(self, name, ex_time=1800, token_generate_func=None):
+        """
+        Generate token.
+
+        ``ex_time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 24 hours.
+
+        ``token_generate_func`` a callable used to generate the token.
+        """
+        code = token_generate_func() if token_generate_func else str(uuid.uuid4())
+        token_key = '{}token:{}'.format(KEY_PREFIX, name)
+        self.setex(token_key, ex_time, code)
+        return code
+
+    def token_exists(self, name, code):
+        """
+        Check token code exists or not.
+        """
+        token_key = '{}token:{}'.format(KEY_PREFIX, name)
+        return self.get(token_key) == str(code)
+
     # Verification Codes Section
     def vcode(self, vname, quota=10, ndigits=6, ex_time=1800, code_cast_func=str):
         """
-        Get verification code if not reach quota. Return a 2-item tuple: (verification code, whether reach quota or not).
+        Generate verification code if not reach quota. Return a 2-item tuple: (verification code, whether reach quota or not).
 
         ``quota`` indicates limitation of generating code, 0 for limitlessness.
 
@@ -553,8 +574,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 return '', True
         code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
-        if isinstance(ex_time, datetime.timedelta):
-            ex_time = ex_time.seconds + ex_time.days * 24 * 3600
         self.setex(vcode_key, ex_time, code)
         return code, False
 
@@ -664,10 +683,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     lrangeex = lrange_ex
     sortedpop = sorted_pop
     deletesadd = delete_sadd
-
-    # For rename function
-    token = vcode
-    token_exists = vcode_exists
 
     # For backwards compatibility
     zgte = zge

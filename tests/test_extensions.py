@@ -406,6 +406,17 @@ class TestRedisExtensionsCommands(object):
         assert r.release_lock(lockname, identifier)
         assert not r.release_lock(lockname, identifier)
 
+    # Token
+
+    def test_token(self, r):
+        phone = '18888888888'
+        assert r.token(phone)
+
+    def test_token_exists(self, r):
+        phone = '18888888888'
+        token = r.token(phone)
+        assert r.token_exists(phone, token)
+
     # Verification Codes Section
 
     def test_vcode(self, r):
