@@ -140,7 +140,7 @@ Out[5]: 3600
   In [3]: phone = '18888888888'
 
   In [4]: r.vcode(phone)
-  Out[4]: ('678366', False)
+  Out[4]: ('678366', False, False)
 
   In [5]: r.vcode_exists(phone, '678366')
   Out[5]: True

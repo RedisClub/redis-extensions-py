@@ -553,35 +553,77 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.get(token_key) == str(code)
 
     # Verification Codes Section
-    def vcode(self, vname, quota=10, ndigits=6, ex_time=1800, code_cast_func=str):
-        """
-        Generate verification code if not reach quota. Return a 2-item tuple: (verification code, whether reach quota or not).
+    def __black_list(self, value, cate='phone'):
+        black_key = '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
+        return self.sismember(black_key, value)
 
-        ``quota`` indicates limitation of generating code, 0 for limitlessness.
+    def __quota_incr(self, value, cate='phone', quota=10):
+        quota_key = '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
+        num = self.incr(quota_key)
+        if num == 1:
+            self.expire(quota_key, self.REDIS_EXPIRED_ONE_DAY)  # Only can called ``quota`` num within 24 hours.
+        return num > quota
+
+    def __req_interval(self, value, cate='phone', req_interval=60):
+        req_stamp_key = '{}vcode:{}:req:stamp:{}'.format(KEY_PREFIX, cate, value)
+        curstamp = tc.utc_timestamp(ms=False)
+        laststamp = int(self.getset(req_stamp_key, curstamp) or 0)
+        if curstamp - laststamp < req_interval:
+            black_key = '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
+            self.sadd(black_key, value)
+            return True
+        return False
+
+    def vcode(self, phone, ipaddr=None, quota=10, req_interval=60, black_list=True, ndigits=6, ex_time=1800, code_cast_func=str):
+        """
+        Generate verification code if not reach quota. Return a 2-item tuple: (Verification code, Whether reach quota or not, Whether in black list or not).
+
+        ``quota`` indicates limitation of generating code, ``phone`` and ``ipaddr`` use in common, 0 for limitlessness.
+
+        ``req_interval`` indicates interval of two request, ``phone`` and ``ipaddr`` use in common, 0 for limitlessness.
+
+        ``black_list`` indicates whether check black list or not.
 
         ``ndigits`` indicates length of generated code.
 
         ``ex_time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 24 hours.
 
         ``code_cast_func`` a callable used to cast the code return value.
-        """
-        if quota:
-            vcode_quota_key = '{}vcode:quota:{}'.format(KEY_PREFIX, vname)
-            vcode_num = self.incr(vcode_quota_key)
-            if vcode_num == 1:
-                self.expire(vcode_quota_key, self.REDIS_EXPIRED_ONE_DAY)  # Only can called ``quota`` num within 24 hours.
-            if vcode_num > quota:
-                return '', True
-        code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
-        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
-        self.setex(vcode_key, ex_time, code)
-        return code, False
 
-    def vcode_exists(self, vname, code):
+        ``black_list`` - ``redis:extensions:vcode:phone:black:list`` & ``redis:extensions:vcode:ipaddr:black:list``
+        """
+        # Black List Check
+        if black_list:
+            if self.__black_list(phone, cate='phone') or (ipaddr and self.__black_list(ipaddr, cate='ipaddr')):
+                return None, None, True
+        # Quota Check
+        if quota:
+            # Phone Quota
+            if self.__quota_incr(phone, cate='phone', quota=quota):
+                return None, True, None
+            # Ipaddr Quota If `ipaddr`` Isn't ``None``
+            if ipaddr:
+                if self.__quota_incr(ipaddr, cate='ipaddr', quota=quota):
+                    return None, True, None
+        # Req Interval Check
+        if req_interval:
+            # Phone Interval
+            if self.__req_interval(phone, cate='phone', req_interval=req_interval):
+                return None, False, True
+            # Ipaddr Interval If `ipaddr`` Isn't ``None``
+            if ipaddr:
+                if self.__req_interval(ipaddr, cate='ipaddr', req_interval=req_interval):
+                    return None, False, True
+        code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
+        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
+        self.setex(vcode_key, ex_time, code)
+        return code, False, False
+
+    def vcode_exists(self, phone, code):
         """
         Check verification code exists or not.
         """
-        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, vname)
+        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
         return self.get(vcode_key) == str(code)
 
     # Delay Tasks Section

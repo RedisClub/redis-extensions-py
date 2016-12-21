@@ -421,24 +421,24 @@ class TestRedisExtensionsCommands(object):
 
     def test_vcode(self, r):
         phone = '18888888888'
-        code, overtop = r.vcode(phone)
+        code, overtop, blacklist = r.vcode(phone)
         assert len(code) == 6
         assert not overtop
-        assert r.exists('redis:extensions:vcode:quota:' + phone)
-        code, overtop = r.vcode(phone, quota=1)
+        assert r.exists('redis:extensions:vcode:phone:quota:' + phone)
+        code, overtop, blacklist = r.vcode(phone, quota=1, req_interval=0)
         assert not code
         assert overtop
-        code, overtop = r.vcode(phone, quota=0)
+        code, overtop, blacklist = r.vcode(phone, quota=0, req_interval=0)
         assert len(code) == 6
         assert not overtop
-        code, overtop = r.vcode(phone, quota=0, ndigits=4)
+        code, overtop, blacklist = r.vcode(phone, quota=0, req_interval=0, ndigits=4)
         assert len(code) == 4
 
     def test_vcode_exists(self, r):
         phone = '18888888888'
-        code, overtop = r.vcode(phone)
+        code, overtop, blacklist = r.vcode(phone)
         assert r.vcode_exists(phone, code)
-        code, overtop = r.vcode(phone, code_cast_func=int)
+        code, overtop, blacklist = r.vcode(phone, req_interval=0, code_cast_func=int)
         assert r.vcode_exists(phone, code)
         assert not r.vcode_exists(phone, '4321')
 
