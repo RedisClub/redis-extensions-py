@@ -5,7 +5,7 @@ import importlib
 import json
 import logging
 import re
-import time
+import time as mod_time
 import uuid
 
 import vcode
@@ -269,18 +269,18 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.delete_lpush(name, *values)
 
-    def lpush_ex(self, name, ex_time, value):
+    def lpush_ex(self, name, time, value):
         """
-        Push ``value`` that expires in ``ex_time`` seconds onto the head of the list ``name``.
+        Push ``value`` that expires in ``time`` seconds onto the head of the list ``name``.
 
-        ``ex_time`` can be represented by an integer or a Python timedelta object.
+        ``time`` can be represented by an integer or a Python timedelta object.
         """
-        if isinstance(ex_time, datetime.timedelta):
-            ex_time = ex_time.seconds + ex_time.days * 24 * 3600
-        return self.zadd(name, time.time() + ex_time, value)
+        if isinstance(time, datetime.timedelta):
+            time = time.seconds + time.days * 24 * 3600
+        return self.zadd(name, mod_time.time() + time, value)
 
     def lrange_ex(self, name):
-        cur_time = time.time()
+        cur_time = mod_time.time()
         return self.pipeline().zrangebyscore(name, cur_time, '+inf').zremrangebyscore(name, 0, cur_time).execute()
 
     def sorted_pop(self, name, rank=0, sorted_func=None, reverse=True):
@@ -428,7 +428,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return
 
     def __timestamps(self, desc=False):
-        stamp = int(time.time() * 1000)
+        stamp = int(mod_time.time() * 1000)
         return self.max_timestamp - stamp if desc else stamp
 
     def __stampscore(self, score, desc=False):
@@ -459,11 +459,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     # Locks Section
     def acquire_lock(self, lockname, acquire_timeout=10):
         identifier = str(uuid.uuid4())
-        end = time.time() + acquire_timeout
-        while time.time() < end:
+        end = mod_time.time() + acquire_timeout
+        while mod_time.time() < end:
             if self.setnx(KEY_PREFIX + 'lock:' + lockname, identifier):
                 return identifier
-            time.sleep(.001)
+            mod_time.sleep(.001)
         return False
 
     def release_lock(self, lockname, identifier):
@@ -532,17 +532,17 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         }
 
     # Token
-    def token(self, name, ex_time=1800, token_generate_func=None):
+    def token(self, name, time=1800, token_generate_func=None):
         """
         Generate token.
 
-        ``ex_time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 24 hours.
+        ``time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 30 minutes.
 
         ``token_generate_func`` a callable used to generate the token.
         """
         code = token_generate_func() if token_generate_func else str(uuid.uuid4())
         token_key = '{}token:{}'.format(KEY_PREFIX, name)
-        self.setex(token_key, ex_time, code)
+        self.setex(token_key, time, code)
         return code
 
     def token_exists(self, name, code):
@@ -561,7 +561,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         quota_key = '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
         num = self.incr(quota_key)
         if num == 1:
-            self.expire(quota_key, self.REDIS_EXPIRED_ONE_DAY)  # Only can called ``quota`` num within 24 hours.
+            self.expire(quota_key, 86400)  # Only can called ``quota`` num within 24 hours.
         return num > quota
 
     def __req_interval(self, value, cate='phone', req_interval=60):
@@ -574,7 +574,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return True
         return False
 
-    def vcode(self, phone, ipaddr=None, quota=10, req_interval=60, black_list=True, ndigits=6, ex_time=1800, code_cast_func=str):
+    def vcode(self, phone, ipaddr=None, quota=10, req_interval=60, black_list=True, ndigits=6, time=1800, code_cast_func=str):
         """
         Generate verification code if not reach quota. Return a 2-item tuple: (Verification code, Whether reach quota or not, Whether in black list or not).
 
@@ -586,7 +586,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``ndigits`` indicates length of generated code.
 
-        ``ex_time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 24 hours.
+        ``time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 30 minutes.
 
         ``code_cast_func`` a callable used to cast the code return value.
 
@@ -616,7 +616,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                     return None, False, True
         code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
-        self.setex(vcode_key, ex_time, code)
+        self.setex(vcode_key, time, code)
         return code, False, False
 
     def vcode_exists(self, phone, code):
@@ -633,7 +633,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         item = json.dumps([identifier, queue, name, args])
 
         if delay > 0:
-            self.zadd(delayed, time.time() + delay, item)
+            self.zadd(delayed, mod_time.time() + delay, item)
         else:
             self.rpush(KEY_PREFIX + 'queue:' + queue, item)
 
@@ -661,8 +661,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         while True:
             item = self.zrange(delayed, 0, 0, withscores=True)
 
-            if not item or item[0][1] > time.time():
-                time.sleep(.01)
+            if not item or item[0][1] > mod_time.time():
+                mod_time.sleep(.01)
                 continue
 
             logger.info(item)
