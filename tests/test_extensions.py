@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import time
 
 import pytest
 
@@ -396,26 +397,29 @@ class TestRedisExtensionsCommands(object):
     # Locks Section
 
     def test_acquire_lock(self, r):
-        lockname = 'redis_extensions'
-        assert r.acquire_lock(lockname)
-        assert not r.acquire_lock(lockname, acquire_timeout=0.05)
+        # Acquire Lock Success
+        assert r.acquire_lock('a')
+        # Acquire Lock Fail
+        assert not r.acquire_lock('a', acquire_timeout=0.05)
+        # Acquire Lock Auto Release
+        assert r.acquire_lock('b', ex=1)
+        assert r.exists('redis:extensions:lock:b')
+        time.sleep(1)
+        assert not r.exists('redis:extensions:lock:b')
 
     def test_release_lock(self, r):
-        lockname = 'redis_extensions'
-        identifier = r.acquire_lock(lockname)
-        assert r.release_lock(lockname, identifier)
-        assert not r.release_lock(lockname, identifier)
+        identifier = r.acquire_lock('a')
+        assert r.release_lock('a', identifier)
+        assert not r.release_lock('a', identifier)
 
     # Token
 
     def test_token(self, r):
-        phone = '18888888888'
-        assert r.token(phone)
+        assert r.token('a')
 
     def test_token_exists(self, r):
-        phone = '18888888888'
-        token = r.token(phone)
-        assert r.token_exists(phone, token)
+        token = r.token('a')
+        assert r.token_exists('a', token)
 
     # Verification Codes Section
 
@@ -433,6 +437,16 @@ class TestRedisExtensionsCommands(object):
         assert not overtop
         code, overtop, blacklist = r.vcode(phone, quota=0, req_interval=0, ndigits=4)
         assert len(code) == 4
+
+    def test_vcode_quota(self, r):
+        phone = '18888888888'
+        ipaddr = 'localhost'
+        _, _, _ = r.vcode(phone)
+        assert r.vcode_quota(phone) == 1
+        assert r.vcode_quota(ipaddr=ipaddr) == 0
+        phone_quota, ipaddr_quota = r.vcode_quota(phone, ipaddr=ipaddr)
+        assert phone_quota == 1
+        assert ipaddr_quota == 0
 
     def test_vcode_exists(self, r):
         phone = '18888888888'

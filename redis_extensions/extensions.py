@@ -457,11 +457,18 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.rawscore(self.zscore(name, value))
 
     # Locks Section
-    def acquire_lock(self, lockname, acquire_timeout=10):
+    def acquire_lock(self, lockname, ex=None, acquire_timeout=10):
+        """
+        Acquire lock for ``lockname``.
+
+        ``ex`` sets an expire flag on key ``name`` for ``ex`` seconds.
+
+        ``acquire_timeout`` indicates retry time of acquiring lock.
+        """
         identifier = str(uuid.uuid4())
         end = mod_time.time() + acquire_timeout
         while mod_time.time() < end:
-            if self.setnx(KEY_PREFIX + 'lock:' + lockname, identifier):
+            if self.set(KEY_PREFIX + 'lock:' + lockname, identifier, ex=ex, nx=True):
                 return identifier
             mod_time.sleep(.001)
         return False
@@ -536,7 +543,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Generate token.
 
-        ``time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 30 minutes.
+        ``time`` indicates expire time of generating code, which can be represented by an integer or a Python timedelta object, Default: 30 minutes.
 
         ``token_generate_func`` a callable used to generate the token.
         """
@@ -564,6 +571,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             self.expire(quota_key, 86400)  # Only can called ``quota`` num within 24 hours.
         return num > quota
 
+    def __quota_num(self, value, cate='phone'):
+        quota_key = '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
+        return int(self.get(quota_key) or 0)
+
     def __req_interval(self, value, cate='phone', req_interval=60):
         req_stamp_key = '{}vcode:{}:req:stamp:{}'.format(KEY_PREFIX, cate, value)
         curstamp = tc.utc_timestamp(ms=False)
@@ -586,7 +597,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``ndigits`` indicates length of generated code.
 
-        ``time`` indicates expire time of generated code, which can be represented by an integer or a Python timedelta object, Default: 30 minutes.
+        ``time`` indicates expire time of generating code, which can be represented by an integer or a Python timedelta object, Default: 30 minutes.
 
         ``code_cast_func`` a callable used to cast the code return value.
 
@@ -618,6 +629,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
         self.setex(vcode_key, time, code)
         return code, False, False
+
+    def vcode_quota(self, phone=None, ipaddr=None):
+        if phone and not ipaddr:
+            return self.__quota_num(phone, cate='phone')
+        if not phone and ipaddr:
+            return self.__quota_num(ipaddr, cate='ipaddr')
+        return self.__quota_num(phone, cate='phone'), self.__quota_num(ipaddr, cate='ipaddr')
 
     def vcode_exists(self, phone, code):
         """
