@@ -10,7 +10,7 @@ import uuid
 
 import vcode
 from redis import StrictRedis
-from redis._compat import iteritems
+from redis._compat import iteritems, xrange
 from redis.exceptions import ResponseError, WatchError
 from redis_extensions.expires import BaseRedisExpires
 from TimeConvert import TimeConvert as tc
@@ -304,6 +304,16 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         Delete key specified by ``name`` & Add ``value(s)`` to set ``name``.
         """
         return self.pipeline().delete(name).sadd(name, *values).execute()[::-1]
+
+    def multi_spop(self, name, num=1):
+        """
+        Remove and return multi random member of set ``name``.
+        """
+        p = self.pipeline()
+        for _ in xrange(num):
+            p.spop(name)
+        eles = p.execute()
+        return eles, sum(x is not None for x in eles)
 
     # ZSorts(Sorted Sets) Section
     def __list_substractor(self, minuend, subtrahend):
@@ -743,6 +753,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     lrangeex = lrange_ex
     sortedpop = sorted_pop
     deletesadd = delete_sadd
+    multispop = multi_spop
 
     # For backwards compatibility
     zgte = zge

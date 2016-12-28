@@ -322,6 +322,15 @@ class TestRedisExtensionsCommands(object):
         assert result[0] == 10
         assert result[1]
 
+    def test_multi_spop(self, r):
+        r.sadd('a', *range(10))
+        eles, num = r.multi_spop('a', 5)
+        assert len(eles) == 5
+        assert num == 5
+        eles, num = r.multi_spop('a', 10)
+        assert len(eles) == 10
+        assert num == 5
+
     # ZSorts(Sorted Sets) Section
 
     def test_zgt(self, r):
