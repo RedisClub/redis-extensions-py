@@ -44,6 +44,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         Delete a list of keys matching ``pattern``.
 
         ``iter`` if set to True, will ``scan_iter`` first then ``delete``, else will ``keys`` first then ``delete``.
+
         ``count`` allows for hint the minimum number of returns, ``iter`` if set to True, else the maximum number to delete once.
 
         Warning: ``iter`` if set to True, ``scan_iter`` will be very very very slow when keys' amount very large.
@@ -484,8 +485,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return False
 
     def release_lock(self, lockname, identifier):
-        pipe = self.pipeline()
+        """
+        Release lock for ``lockname``.
+        """
         lockname = KEY_PREFIX + 'lock:' + lockname
+        pipe = self.pipeline()
         while True:
             try:
                 pipe.watch(lockname)
@@ -499,6 +503,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             except WatchError:
                 pass
         return False
+
+    def lock_exists(self, lockname, regex=False):
+        """
+        Check lock for ``lockname`` exists or not.
+        """
+        lockname = KEY_PREFIX + 'lock:' + lockname
+        return self.keys(lockname) if regex else self.exists(lockname)
 
     # SignIns Section
     def __get_signin_info(self, signname):

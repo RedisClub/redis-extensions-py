@@ -421,6 +421,13 @@ class TestRedisExtensionsCommands(object):
         assert r.release_lock('a', identifier)
         assert not r.release_lock('a', identifier)
 
+    def test_lock_exists(self, r):
+        assert not r.lock_exists('a')
+        identifier = r.acquire_lock('a')
+        assert r.lock_exists('a')
+        r.release_lock('a', identifier)
+        assert not r.lock_exists('a')
+
     # Token
 
     def test_token(self, r):
