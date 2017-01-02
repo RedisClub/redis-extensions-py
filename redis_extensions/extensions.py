@@ -729,6 +729,12 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def georem(self, name, *values):
         return self.zrem(name, *values)
 
+    def geomembers(self, name, start=0, end=-1, desc=False, withscores=False, score_cast_func=float):
+        """
+        zrange(name, 0, -1) == georadius(name, 0, 0, '+inf', unit='m')
+        """
+        return self.zrange(name, start=start, end=end, desc=desc, withscores=withscores, score_cast_func=score_cast_func)
+
     # For naming conventions compatibility, order by define
     deletekeys = delete_keys
     incrlimit = incr_limit

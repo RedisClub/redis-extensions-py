@@ -486,3 +486,7 @@ class TestRedisExtensionsCommands(object):
         assert r.geopos('a', 'x')
         r.georem('a', 'x')
         assert not r.geopos('a', 'x')
+
+    def test_geomembers(self, r):
+        r.geoadd('a', 0, 0, 'x')
+        assert r.geomembers('a') == ['x']
