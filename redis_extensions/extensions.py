@@ -607,13 +607,20 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         black_key = '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
         return self.sismember(black_key, value)
 
+    def __quota_key(self, value, cate='phone'):
+        return '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
+
     def __quota_incr(self, value, cate='phone', quota=10):
-        quota_key = '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
+        quota_key = self.__quota_key(value, cate=cate)
         return self.__quota(quota_key, amount=quota, time=86400)
 
     def __quota_num(self, value, cate='phone'):
-        quota_key = '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
+        quota_key = self.__quota_key(value, cate=cate)
         return int(self.get(quota_key) or 0)
+
+    def __quota_delete(self, value, cate='phone'):
+        quota_key = self.__quota_key(value, cate=cate)
+        return self.delete(quota_key)
 
     def __req_interval(self, value, cate='phone', req_interval=60):
         req_stamp_key = '{}vcode:{}:req:stamp:{}'.format(KEY_PREFIX, cate, value)
@@ -668,6 +675,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
         self.setex(vcode_key, time, code)
+        # Delete vcode exists quota key
+        self.__quota_delete(phone, cate='exists')
         return code, False, False
 
     def vcode_quota(self, phone=None, ipaddr=None):
