@@ -468,34 +468,35 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.rawscore(self.zscore(name, value))
 
     # Locks Section
-    def acquire_lock(self, lockname, ex=None, acquire_timeout=10):
+    def acquire_lock(self, name, time=None, acquire_timeout=10):
         """
-        Acquire lock for ``lockname``.
+        Acquire lock for ``name``.
 
-        ``ex`` sets an expire flag on key ``name`` for ``ex`` seconds.
+        ``time`` sets an expire flag on key ``name`` for ``time`` seconds.
 
         ``acquire_timeout`` indicates retry time of acquiring lock.
         """
         identifier = str(uuid.uuid4())
         end = mod_time.time() + acquire_timeout
         while mod_time.time() < end:
-            if self.set(KEY_PREFIX + 'lock:' + lockname, identifier, ex=ex, nx=True):
+            lock_key = '{}lock:{}'.format(KEY_PREFIX, name)
+            if self.set(lock_key, identifier, ex=time, nx=True):
                 return identifier
             mod_time.sleep(.001)
         return False
 
-    def release_lock(self, lockname, identifier):
+    def release_lock(self, name, identifier):
         """
-        Release lock for ``lockname``.
+        Release lock for ``name``.
         """
-        lockname = KEY_PREFIX + 'lock:' + lockname
+        lock_key = '{}lock:{}'.format(KEY_PREFIX, name)
         pipe = self.pipeline()
         while True:
             try:
-                pipe.watch(lockname)
-                if pipe.get(lockname) == identifier:
+                pipe.watch(lock_key)
+                if pipe.get(lock_key) == identifier:
                     pipe.multi()
-                    pipe.delete(lockname)
+                    pipe.delete(lock_key)
                     pipe.execute()
                     return True
                 pipe.unwatch()
@@ -504,12 +505,26 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 pass
         return False
 
-    def lock_exists(self, lockname, regex=False):
+    def lock_exists(self, name, regex=False):
         """
-        Check lock for ``lockname`` exists or not.
+        Check lock for ``name`` exists or not.
         """
-        lockname = KEY_PREFIX + 'lock:' + lockname
-        return self.keys(lockname) if regex else self.exists(lockname)
+        lock_key = '{}lock:{}'.format(KEY_PREFIX, name)
+        return self.keys(lock_key) if regex else self.exists(lock_key)
+
+    # Quota Section
+    def __quota(self, quota_key, amount=10, time=None):
+        num = self.incr(quota_key)
+        if num == 1 and time:
+            self.expire(quota_key, time)
+        return num > amount
+
+    def quota(self, name, amount=10, time=None):
+        """
+        Check whether overtop amount or not.
+        """
+        quota_key = '{}quota:{}'.format(KEY_PREFIX, name)
+        return self.__quota(quota_key, amount=amount, time=time)
 
     # SignIns Section
     def __get_signin_info(self, signname):
@@ -580,6 +595,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         token_key = '{}token:{}'.format(KEY_PREFIX, name)
         return self.get(token_key) == str(code)
 
+    def token_delete(self, name):
+        """
+        Delete token.
+        """
+        token_key = '{}token:{}'.format(KEY_PREFIX, name)
+        return self.delete(token_key)
+
     # Verification Codes Section
     def __black_list(self, value, cate='phone'):
         black_key = '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
@@ -587,10 +609,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     def __quota_incr(self, value, cate='phone', quota=10):
         quota_key = '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
-        num = self.incr(quota_key)
-        if num == 1:
-            self.expire(quota_key, 86400)  # Only can called ``quota`` num within 24 hours.
-        return num > quota
+        return self.__quota(quota_key, amount=quota, time=86400)
 
     def __quota_num(self, value, cate='phone'):
         quota_key = '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
@@ -658,12 +677,23 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return self.__quota_num(ipaddr, cate='ipaddr')
         return self.__quota_num(phone, cate='phone'), self.__quota_num(ipaddr, cate='ipaddr')
 
-    def vcode_exists(self, phone, code):
+    def vcode_exists(self, phone, code, keep=False, quota=3):
         """
-        Check verification code exists or not.
+        Check verification code exists or not, code will deleted when exists or not quota(default 3) times in a row.
         """
         vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
-        return self.get(vcode_key) == str(code)
+        exists = self.get(vcode_key) == str(code)
+        if not keep:
+            if exists or self.__quota_incr(phone, cate='exists', quota=quota):
+                self.vcode_delete(phone)
+        return exists
+
+    def vcode_delete(self, phone):
+        """
+        Delete verification code.
+        """
+        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
+        return self.delete(vcode_key)
 
     # Delay Tasks Section
     def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):

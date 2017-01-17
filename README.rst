@@ -98,6 +98,19 @@ Lock::
     Out[9]: False
 
 
+Quota::
+
+    In [1]: import redis_extensions as redis
+
+    In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+    In [3]: r.quota('redis_extensions', amount=1, time=10)
+    Out[3]: False
+
+    In [4]: r.quota('redis_extensions', amount=1, time=10)
+    Out[4]: True
+
+
 Signin::
 
     In [1]: import redis_extensions as redis
@@ -155,6 +168,9 @@ Token::
     In [5]: r.token_exists(phone, '8bde88aa-71e9-4dea-846c-b1684a02b0f5')
     Out[5]: True
 
+    In [6]: r.token_delete(phone)
+    Out[6]: 1
+
 
 Verification Code::
 
@@ -169,4 +185,7 @@ Verification Code::
 
     In [5]: r.vcode_exists(phone, '678366')
     Out[5]: True
+
+    In [6]: r.vcode_delete(phone)
+    Out[6]: 1
 

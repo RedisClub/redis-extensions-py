@@ -411,7 +411,7 @@ class TestRedisExtensionsCommands(object):
         # Acquire Lock Fail
         assert not r.acquire_lock('a', acquire_timeout=0.05)
         # Acquire Lock Auto Release
-        assert r.acquire_lock('b', ex=1)
+        assert r.acquire_lock('b', time=1)
         assert r.exists('redis:extensions:lock:b')
         time.sleep(1)
         assert not r.exists('redis:extensions:lock:b')
@@ -428,7 +428,13 @@ class TestRedisExtensionsCommands(object):
         r.release_lock('a', identifier)
         assert not r.lock_exists('a')
 
-    # Token
+    # Quota Section
+
+    def test_quota(self, r):
+        assert not r.quota('a', amount=1)
+        assert r.quota('a', amount=1)
+
+    # Token Section
 
     def test_token(self, r):
         assert r.token('a')
@@ -436,6 +442,12 @@ class TestRedisExtensionsCommands(object):
     def test_token_exists(self, r):
         token = r.token('a')
         assert r.token_exists('a', token)
+
+    def test_token_exists(self, r):
+        token = r.token('a')
+        assert r.token_exists('a', token)
+        r.token_delete('a')
+        assert not r.token_exists('a', token)
 
     # Verification Codes Section
 
@@ -467,10 +479,25 @@ class TestRedisExtensionsCommands(object):
     def test_vcode_exists(self, r):
         phone = '18888888888'
         code, overtop, blacklist = r.vcode(phone)
+        assert r.vcode_exists(phone, code, keep=True)
         assert r.vcode_exists(phone, code)
         code, overtop, blacklist = r.vcode(phone, req_interval=0, code_cast_func=int)
-        assert r.vcode_exists(phone, code)
+        assert r.vcode_exists(phone, code, keep=True)
         assert not r.vcode_exists(phone, '4321')
+        code, _, _ = r.vcode(phone, req_interval=0)
+        assert r.vcode_exists(phone, code)
+        assert not r.vcode_exists(phone, code)
+        code, _, _ = r.vcode(phone, req_interval=0)
+        assert not r.vcode_exists(phone, '4321', quota=1)
+        assert not r.vcode_exists(phone, '4321', quota=1)
+        assert not r.vcode_exists(phone, code)
+
+    def test_vcode_delete(self, r):
+        phone = '18888888888'
+        code, _, _ = r.vcode(phone)
+        assert r.vcode_exists(phone, code)
+        r.vcode_delete(phone)
+        assert not r.vcode_exists(phone, code)
 
     # Compatibility Section
 
