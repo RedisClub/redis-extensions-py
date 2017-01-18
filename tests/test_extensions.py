@@ -493,6 +493,8 @@ class TestRedisExtensionsCommands(object):
         assert not r.vcode_exists(phone, code)
         code, _, _ = r.vcode(phone, req_interval=0)
         assert r.vcode_exists(phone, code)
+        code, _, _ = r.vcode(phone)
+        assert r.vcode_exists(phone, code)
 
     def test_vcode_delete(self, r):
         phone = '18888888888'

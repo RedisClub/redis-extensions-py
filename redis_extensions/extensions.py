@@ -607,28 +607,35 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         black_key = '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
         return self.sismember(black_key, value)
 
+    def __vcode_key(self, phone):
+        return '{}vcode:{}'.format(KEY_PREFIX, phone)
+
     def __quota_key(self, value, cate='phone'):
         return '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
 
     def __quota_incr(self, value, cate='phone', quota=10):
-        quota_key = self.__quota_key(value, cate=cate)
-        return self.__quota(quota_key, amount=quota, time=86400)
+        return self.__quota(self.__quota_key(value, cate=cate), amount=quota, time=86400)
 
     def __quota_num(self, value, cate='phone'):
-        quota_key = self.__quota_key(value, cate=cate)
-        return int(self.get(quota_key) or 0)
+        return int(self.get(self.__quota_key(value, cate=cate)) or 0)
 
     def __quota_delete(self, value, cate='phone'):
-        quota_key = self.__quota_key(value, cate=cate)
-        return self.delete(quota_key)
+        return self.delete(self.__quota_key(value, cate=cate))
+
+    def __req_stamp_key(self, value, cate='phone'):
+        return '{}vcode:{}:req:stamp:{}'.format(KEY_PREFIX, cate, value)
+
+    def __req_stamp_delete(self, value, cate='phone'):
+        return self.delete(self.__req_stamp_key(value, cate=cate))
+
+    def __black_list_key(self, cate='phone'):
+        return '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
 
     def __req_interval(self, value, cate='phone', req_interval=60):
-        req_stamp_key = '{}vcode:{}:req:stamp:{}'.format(KEY_PREFIX, cate, value)
         curstamp = tc.utc_timestamp(ms=False)
-        laststamp = int(self.getset(req_stamp_key, curstamp) or 0)
+        laststamp = int(self.getset(self.__req_stamp_key(value, cate=cate), curstamp) or 0)
         if curstamp - laststamp < req_interval:
-            black_key = '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
-            self.sadd(black_key, value)
+            self.sadd(self.__black_list_key(cate=cate), value)
             return True
         return False
 
@@ -651,30 +658,26 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         ``black_list`` - ``redis:extensions:vcode:phone:black:list`` & ``redis:extensions:vcode:ipaddr:black:list``
         """
         # Black List Check
-        if black_list:
-            if self.__black_list(phone, cate='phone') or (ipaddr and self.__black_list(ipaddr, cate='ipaddr')):
-                return None, None, True
+        if black_list and (self.__black_list(phone, cate='phone') or (ipaddr and self.__black_list(ipaddr, cate='ipaddr'))):
+            return None, None, True
         # Quota Check
         if quota:
             # Phone Quota
             if self.__quota_incr(phone, cate='phone', quota=quota):
                 return None, True, None
             # Ipaddr Quota If `ipaddr`` Isn't ``None``
-            if ipaddr:
-                if self.__quota_incr(ipaddr, cate='ipaddr', quota=quota):
-                    return None, True, None
+            if ipaddr and self.__quota_incr(ipaddr, cate='ipaddr', quota=quota):
+                return None, True, None
         # Req Interval Check
         if req_interval:
             # Phone Interval
             if self.__req_interval(phone, cate='phone', req_interval=req_interval):
                 return None, False, True
             # Ipaddr Interval If `ipaddr`` Isn't ``None``
-            if ipaddr:
-                if self.__req_interval(ipaddr, cate='ipaddr', req_interval=req_interval):
-                    return None, False, True
+            if ipaddr and self.__req_interval(ipaddr, cate='ipaddr', req_interval=req_interval):
+                return None, False, True
         code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
-        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
-        self.setex(vcode_key, time, code)
+        self.setex(self.__vcode_key(phone), time, code)
         # Delete vcode exists quota key
         self.__quota_delete(phone, cate='exists')
         return code, False, False
@@ -686,23 +689,25 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return self.__quota_num(ipaddr, cate='ipaddr')
         return self.__quota_num(phone, cate='phone'), self.__quota_num(ipaddr, cate='ipaddr')
 
-    def vcode_exists(self, phone, code, keep=False, quota=3):
+    def vcode_exists(self, phone, code, ipaddr=None, keep=False, quota=3):
         """
-        Check verification code exists or not, code will deleted when exists or not quota(default 3) times in a row.
+        Check verification code exists or not.
         """
-        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
-        exists = self.get(vcode_key) == str(code)
-        if not keep:
-            if exists or self.__quota_incr(phone, cate='exists', quota=quota):
-                self.vcode_delete(phone)
+        exists = self.get(self.__vcode_key(phone)) == str(code)
+        # Delete req stamp when vcode exists
+        if exists:
+            self.__req_stamp_delete(phone, cate='phone')
+            ipaddr and self.__req_stamp_delete(ipaddr, cate='ipaddr')
+        # Deleted when exists or not quota(default 3) times in a row
+        if not keep and (exists or self.__quota_incr(phone, cate='exists', quota=quota)):
+            self.vcode_delete(phone)
         return exists
 
     def vcode_delete(self, phone):
         """
         Delete verification code.
         """
-        vcode_key = '{}vcode:{}'.format(KEY_PREFIX, phone)
-        return self.delete(vcode_key)
+        return self.delete(self.__vcode_key(phone))
 
     # Delay Tasks Section
     def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):
