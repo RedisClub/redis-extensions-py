@@ -699,7 +699,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             self.__req_stamp_delete(phone, cate='phone')
             ipaddr and self.__req_stamp_delete(ipaddr, cate='ipaddr')
         # Deleted when exists or not quota(default 3) times in a row
-        if not keep and (exists or self.__quota_incr(phone, cate='exists', quota=quota)):
+        if not keep and (exists or self.__quota_incr(phone, cate='exists', quota=quota - 1)):
             self.vcode_delete(phone)
         return exists
 
