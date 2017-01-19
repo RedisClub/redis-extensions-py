@@ -468,6 +468,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.rawscore(self.zscore(name, value))
 
     # Locks Section
+    def __lock_key(self, name):
+        return '{}lock:{}'.format(KEY_PREFIX, name)
+
     def acquire_lock(self, name, time=None, acquire_timeout=10):
         """
         Acquire lock for ``name``.
@@ -479,8 +482,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         identifier = str(uuid.uuid4())
         end = mod_time.time() + acquire_timeout
         while mod_time.time() < end:
-            lock_key = '{}lock:{}'.format(KEY_PREFIX, name)
-            if self.set(lock_key, identifier, ex=time, nx=True):
+            if self.set(self.__lock_key(name), identifier, ex=time, nx=True):
                 return identifier
             mod_time.sleep(.001)
         return False
@@ -489,7 +491,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Release lock for ``name``.
         """
-        lock_key = '{}lock:{}'.format(KEY_PREFIX, name)
+        lock_key = self.__lock_key(name)
         pipe = self.pipeline()
         while True:
             try:
@@ -509,10 +511,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Check lock for ``name`` exists or not.
         """
-        lock_key = '{}lock:{}'.format(KEY_PREFIX, name)
+        lock_key = self.__lock_key(name)
         return self.keys(lock_key) if regex else self.exists(lock_key)
 
     # Quota Section
+    def __quota_key(self, name):
+        return '{}quota:{}'.format(KEY_PREFIX, name)
+
     def __quota(self, quota_key, amount=10, time=None):
         num = self.incr(quota_key)
         if num == 1 and time:
@@ -523,8 +528,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Check whether overtop amount or not.
         """
-        quota_key = '{}quota:{}'.format(KEY_PREFIX, name)
-        return self.__quota(quota_key, amount=amount, time=time)
+        return self.__quota(self.__quota_key(name), amount=amount, time=time)
 
     # SignIns Section
     def __get_signin_info(self, signname):
@@ -575,6 +579,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         }
 
     # Token
+    def __token_key(self, name):
+        return '{}token:{}'.format(KEY_PREFIX, name)
+
     def token(self, name, time=1800, token_generate_func=None):
         """
         Generate token.
@@ -584,23 +591,20 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         ``token_generate_func`` a callable used to generate the token.
         """
         code = token_generate_func() if token_generate_func else str(uuid.uuid4())
-        token_key = '{}token:{}'.format(KEY_PREFIX, name)
-        self.setex(token_key, time, code)
+        self.setex(self.__token_key(name), time, code)
         return code
 
     def token_exists(self, name, code):
         """
         Check token code exists or not.
         """
-        token_key = '{}token:{}'.format(KEY_PREFIX, name)
-        return self.get(token_key) == str(code)
+        return self.get(self.__token_key(name)) == str(code)
 
     def token_delete(self, name):
         """
         Delete token.
         """
-        token_key = '{}token:{}'.format(KEY_PREFIX, name)
-        return self.delete(token_key)
+        return self.delete(self.__token_key(name))
 
     # Verification Codes Section
     def __black_list(self, value, cate='phone'):
@@ -710,6 +714,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.delete(self.__vcode_key(phone))
 
     # Delay Tasks Section
+    def __queue_key(self, queue):
+        return '{}queue:{}'.format(KEY_PREFIX, queue)
+
     def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):
         identifier = str(uuid.uuid4())
 
@@ -718,7 +725,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         if delay > 0:
             self.zadd(delayed, mod_time.time() + delay, item)
         else:
-            self.rpush(KEY_PREFIX + 'queue:' + queue, item)
+            self.rpush(self.__queue_key(queue), item)
 
         return identifier
 
@@ -765,7 +772,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 callbacks[queue](name, args)
 
             if self.zrem(delayed, item):
-                self.rpush(KEY_PREFIX + 'queue:' + queue, item)
+                self.rpush(self.__queue_key(queue), item)
 
             self.release_lock(identifier, locked)
 
