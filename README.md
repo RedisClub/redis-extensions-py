@@ -56,6 +56,21 @@ In [5]: r.REDIS_EXPIRED_ONE_HOUR
 Out[5]: 3600
 ```
 
+## Warnings
+```python
+In [1]: import redis_extensions as redis
+
+In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+In [3]: r.delete_keys('redis_extensions')
+``r.keys()`` used, may be very very very slow when keys' amount very large
+Out[3]: 0
+
+In [4]: r.lock_exists('redis_extensions', regex=True)
+``r.keys()`` used, may be very very very slow when keys' amount very large
+Out[4]: []
+```
+
 ## Solutions
 * Lock
   ```python

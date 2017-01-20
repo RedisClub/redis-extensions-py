@@ -22,6 +22,7 @@ logger.setLevel(logging.INFO)
 
 
 KEY_PREFIX = 'redis:extensions:'  # Prefix of redis-extensions used key
+WARNING_LOG = '``{}`` used, may be very very very slow when keys\' amount very large'  # ``r.keys()`` and ``r.scan_iter()`` not support use
 
 
 class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
@@ -49,6 +50,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         Warning: ``iter`` if set to True, ``scan_iter`` will be very very very slow when keys' amount very large.
         """
+        logger.warning(WARNING_LOG.format('r.scan_iter()' if iter else 'r.keys()'))
         dels = 0
         while True:
             try:
@@ -511,6 +513,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Check lock for ``name`` exists or not.
         """
+        if regex:
+            logger.warning(WARNING_LOG.format('r.keys()'))
         lock_key = self.__lock_key(name)
         return self.keys(lock_key) if regex else self.exists(lock_key)
 
