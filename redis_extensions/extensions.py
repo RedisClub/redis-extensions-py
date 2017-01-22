@@ -773,7 +773,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
             # Callbacks
             if queue in callbacks:
-                callbacks[queue](name, args)
+                try:
+                    callbacks[queue](name, args)
+                except Exception as e:
+                    logger.error(e)
+                    continue
 
             if self.zrem(delayed, item):
                 self.rpush(self.__queue_key(queue), item)
