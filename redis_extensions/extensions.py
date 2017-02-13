@@ -586,29 +586,41 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __token_key(self, name):
         return '{}token:{}'.format(KEY_PREFIX, name)
 
-    def token(self, name, time=1800, token_generate_func=None):
+    def __token_buffer_key(self, name):
+        return '{}token:buffer:{}'.format(KEY_PREFIX, name)
+
+    def token(self, name, ex=True, time=1800, buf=True, buf_time=300, token_generate_func=None):
         """
         Generate token.
 
+        ``ex`` indicates whether token expire or not.
+
         ``time`` indicates expire time of generating code, which can be represented by an integer or a Python timedelta object, Default: 30 minutes.
+
+        ``buf`` indicates whether replaced token buffer or not.
+
+        ``buf_time`` indicates buffer time of replaced token, which can be represented by an integer or a Python timedelta object, Default: 5 minutes.
 
         ``token_generate_func`` a callable used to generate the token.
         """
         code = token_generate_func() if token_generate_func else str(uuid.uuid4())
-        self.setex(self.__token_key(name), time, code)
+        token_key = self.__token_key(name)
+        buf_code = self.getsetex(token_key, time, code) if ex else self.getset(token_key, code)
+        if buf_code and buf:
+            self.setex(self.__token_buffer_key(name), buf_time, buf_code)
         return code
 
     def token_exists(self, name, code):
         """
         Check token code exists or not.
         """
-        return self.get(self.__token_key(name)) == str(code)
+        return str(code) in self.pipeline().get(self.__token_key(name)).get(self.__token_buffer_key(name)).execute()
 
     def token_delete(self, name):
         """
         Delete token.
         """
-        return self.delete(self.__token_key(name))
+        return self.pipeline().delete(self.__token_key(name)).delete(self.__token_buffer_key(name)).execute()[0]
 
     # Verification Codes Section
     def __black_list(self, value, cate='phone'):

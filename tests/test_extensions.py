@@ -442,8 +442,14 @@ class TestRedisExtensionsCommands(object):
     def test_token_exists(self, r):
         token = r.token('a')
         assert r.token_exists('a', token)
+        # Buffer
+        token2 = r.token('a', buf=True, buf_time=300)
+        assert r.token_exists('a', token)
+        token3 = r.token('a', buf=True, buf_time=1)
+        time.sleep(1)
+        assert not r.token_exists('a', token2)
 
-    def test_token_exists(self, r):
+    def test_token_delete(self, r):
         token = r.token('a')
         assert r.token_exists('a', token)
         r.token_delete('a')
