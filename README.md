@@ -213,6 +213,7 @@ Out[4]: []
 ## Graphic
 
 * Web
+
   ```javascript
   <img src="data:image/png;base64,b64str">
   ```
