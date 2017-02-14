@@ -749,6 +749,20 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         gvcodes = (self.__gvcode_str() for _ in xrange(num))
         return self.sadd(self._gvcode_key(), *gvcodes)
 
+    def gvcode_add(self, num=10):
+        return self.gvcode_initial(num=num)
+
+    def __gvcode_cut_num(self, num=10):
+        # Prevent completely spopped
+        pre_num = self.scard(self._gvcode_key())
+        return pre_num - 1 if num >= pre_num else num
+
+    def gvcode_cut(self, num=10):
+        return self.multi_spop(self._gvcode_key(), num=self.__gvcode_cut_num(num=num))[-1]
+
+    def gvcode_refresh(self, num=10):
+        return self.gvcode_cut(num=self.__gvcode_cut_num(num=num)), self.gvcode_add(num=num)
+
     def gvcode_b64str(self, name, time=1800):
         gvcode = json.loads(self.srandmember(self._gvcode_key()) or '{}')
         b64str, vcode = gvcode.get('b64str', ''), gvcode.get('vcode', '')

@@ -518,6 +518,15 @@ class TestRedisExtensionsCommands(object):
         assert r.gvcode_initial(10) == 10
         assert r.scard(r._gvcode_key()) == 10
 
+    def test_gvcode_cut(self, r):
+        assert r.gvcode_add(10) == 10
+        assert r.gvcode_cut(5) == 5
+        assert r.gvcode_cut(5) == 4
+
+    def test_gvcode_refresh(self, r):
+        assert r.gvcode_add(10) == 10
+        assert r.gvcode_refresh(10) == (9, 10)
+
     def test_gvcode_b64str(self, r):
         b64str = r.gvcode_b64str('a')
         assert r.exists(self.__gvcode_test_key())
