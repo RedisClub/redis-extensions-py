@@ -509,6 +509,27 @@ class TestRedisExtensionsCommands(object):
         r.vcode_delete(phone)
         assert not r.vcode_exists(phone, code)
 
+    # Graphic Verification Codes Section
+
+    def __gvcode_test_key(self):
+        return 'redis:extensions:graphic:vcode:a'
+
+    def test_gvcode_initial(self, r):
+        assert r.gvcode_initial(10) == 10
+        assert r.scard(r._gvcode_key()) == 10
+
+    def test_gvcode_b64str(self, r):
+        b64str = r.gvcode_b64str('a')
+        assert r.exists(self.__gvcode_test_key())
+
+    def test_gvcode_exists(self, r):
+        b64str = r.gvcode_b64str('a')
+        assert r.gvcode_exists('a', None)
+        code = r.get(self.__gvcode_test_key())
+        assert r.gvcode_exists('a', code)
+        assert r.gvcode_exists('a', code.lower())
+        assert r.gvcode_exists('a', code.upper())
+
     # Compatibility Section
 
     def test_compatibility(self, r):

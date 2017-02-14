@@ -192,3 +192,27 @@ Out[4]: []
   ```
 
 * Graphic Verification Code
+  ```python
+  In [1]: import redis_extensions as redis
+
+  In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+  In [3]: r.gvcode_initial(10)
+  Out[3]: 10
+
+  In [4]: r.gvcode_b64str('a')
+
+  Out[4]: 'iVBORw0KGgoAAAANSUhEUgAAAHgAAAAeCAIAAABoq03CAAACg0lEQVR4nO1aO5LCMAyVyAFCw01o4UBciCtwCSo6huEKHIACKjpGWzhrFMdf2Um8nzfMDmFs+eX5WZY9i0QE/xgfi7kJ/BVUITQizk1hdFQhtDV9idVHxApnLiz0GKStMY0fxZsHEcn6jjo9YaHjSQeJ6gbWmGW3ZYFqo9YFJVNHkChvMBSirKFqq6aEQufnwXqEmCahL2SDifOgP2bZgJnjpmrib19F1WEg5g2LlxYqGA+bOvH+9jj7Ekb8cODSZfJSekW+nRrX1ZYzFCPK0YZ31KPfUPF20+9wPqvH7oMIOZYVJDfPcPmrZ35HayBaPFXETTkE0oPYCUtyNJ/esony9SoYbB44t9ZMvxR0nMPRAZe5CMiIFTG1FblVR/8MYnwQEVarrFQLLHVaVw8R8d9PJ53cKTPLl0WC0MEsoTRXWxl02xHc7wlsEOF26z16KgE2btdot4PNxkJJAMM0+Si81WhpuEZJ63HYmMX8VGzujAEAvaEVPNusEUp1WS7h8QgHiceIBxaBEfb73uN2a+YNrUiMysCW1xCeUEQflf1B4jGWo8Hh7sggGqqg1o4OsnXNbtKSsrbP3CdrPILrMwsRXK8AiYvDKkd8BI+aOcm6RkcPA37/jXJ0iUOHc7bEwS2OTjqD2K6VhVSsSFJZEzgccsf115SSgMUdDWAa2X9lYw1ilA1JQqtezye0Lbzf0DTJBKBHnpc6CXH6l2VYMkczF/S+cLmD5HRHXcAy0aPMdTwCALQtAEDTdBHUyhCAX04lTRW3BREl2WTSG6hh9RpPYL2Gy8VUNrXwGPbKucWt6PYuiIlv8hSmE9r/epO9/MTrqThqrKN/JXL/r+NHu2xKfAGHcYJyDRb0UwAAAABJRU5ErkJggg=='
+
+  In [5]: # 显示图片
+
+  In [6]: r.gvcode_exists('a', 'm9eh')
+  Out[6]: True
+  ```
+
+## Graphic
+
+* Web
+  ```javascript
+  <img src="data:image/png;base64,b64str">
+  ```

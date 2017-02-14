@@ -8,7 +8,9 @@ import re
 import time as mod_time
 import uuid
 
+import gvcode
 import vcode
+from CodeConvert import CodeConvert as cc
 from redis import StrictRedis
 from redis._compat import iteritems, xrange
 from redis.exceptions import ResponseError, WatchError
@@ -728,6 +730,33 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         Delete verification code.
         """
         return self.delete(self.__vcode_key(phone))
+
+    # Graphic Verification Codes Section
+    def __gvcode_str(self):
+        b64str, vcode = gvcode.base64()
+        return json.dumps({
+            'b64str': b64str,
+            'vcode': vcode,
+        })
+
+    def _gvcode_key(self):
+        return '{}graphic:vcode'.format(KEY_PREFIX)
+
+    def __gvcode_key(self, name):
+        return '{}graphic:vcode:{}'.format(KEY_PREFIX, name)
+
+    def gvcode_initial(self, num=10):
+        gvcodes = (self.__gvcode_str() for _ in xrange(num))
+        return self.sadd(self._gvcode_key(), *gvcodes)
+
+    def gvcode_b64str(self, name, time=1800):
+        gvcode = json.loads(self.srandmember(self._gvcode_key()) or '{}')
+        b64str, vcode = gvcode.get('b64str', ''), gvcode.get('vcode', '')
+        self.setex(self.__gvcode_key(name), time, vcode)
+        return cc.Convert2Utf8(b64str)
+
+    def gvcode_exists(self, name, code):
+        return (self.get(self.__gvcode_key(name)) or '').lower() == (code or '').lower()
 
     # Delay Tasks Section
     def __queue_key(self, queue):
