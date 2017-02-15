@@ -41,6 +41,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         tc.__init__(timezone=self.timezone)
         super(StrictRedisExtensions, self).__init__(*args, **kwargs)
 
+    def __local_ymd(self, format='%Y-%m-%d'):
+        return tc.local_string(format=format)
+
     # Keys Section
     def delete_keys(self, pattern='*', iter=False, count=None):
         """
@@ -551,7 +554,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         # Last Signin Date, Format ``%Y-%m-%d``
         last_signin_date = signin_info.get('signin_date', '1988-06-15')
         # Today Local Date, Format ``%Y-%m-%d``
-        signin_date = tc.local_string(format='%Y-%m-%d')
+        signin_date = self.__local_ymd()
         # Delta Days between ``Last Signin Date`` and ``Today Local Date``
         delta_days = tc.string_delta(signin_date, last_signin_date, format='%Y-%m-%d')['days']
         return name, signin_info, signin_date, last_signin_date, delta_days
@@ -623,6 +626,26 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         Delete token.
         """
         return self.pipeline().delete(self.__token_key(name)).delete(self.__token_buffer_key(name)).execute()[0]
+
+    # Counter
+    def _counter_key(self, name, time_part_func=None):
+        time_part = time_part_func() if time_part_func else self.__local_ymd(format='%Y%m%d')
+        return '{}counter:{}:{}'.format(KEY_PREFIX, name, time_part)
+
+    def counter(self, name, amount=1, limit=None, ex=True, time=86400, time_part_func=None):
+        """
+        Counter, default ``daily``.
+        """
+        if amount < 0:
+            raise ValueError('The amount argument should not be negative')
+        name = self._counter_key(name, time_part_func=time_part_func)
+        if amount == 0:
+            amount = self.get(name)
+            return amount and int(amount)
+        amount = self.incr_limit(name, amount=amount, limit=limit)
+        if amount == 1 and ex:
+            self.expire(name, time)
+        return amount
 
     # Verification Codes Section
     def __black_list(self, value, cate='phone'):

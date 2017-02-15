@@ -129,6 +129,24 @@ Quota::
     Out[4]: True
 
 
+Token::
+
+    In [1]: import redis_extensions as redis
+
+    In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+    In [3]: phone = '18888888888'
+
+    In [4]: r.token(phone)
+    Out[4]: '8bde88aa-71e9-4dea-846c-b1684a02b0f5'
+
+    In [5]: r.token_exists(phone, '8bde88aa-71e9-4dea-846c-b1684a02b0f5')
+    Out[5]: True
+
+    In [6]: r.token_delete(phone)
+    Out[6]: 1
+
+
 Signin::
 
     In [1]: import redis_extensions as redis
@@ -172,22 +190,20 @@ Signin::
      u'signin_total_days': 1}
 
 
-Token::
+Counter::
 
     In [1]: import redis_extensions as redis
 
     In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
 
-    In [3]: phone = '18888888888'
+    In [3]: r.counter('a')
+    Out[3]: 1
 
-    In [4]: r.token(phone)
-    Out[4]: '8bde88aa-71e9-4dea-846c-b1684a02b0f5'
+    In [4]: r._counter_key('a')
+    Out[4]: 'redis:extensions:counter:a:20170215'
 
-    In [5]: r.token_exists(phone, '8bde88aa-71e9-4dea-846c-b1684a02b0f5')
-    Out[5]: True
-
-    In [6]: r.token_delete(phone)
-    Out[6]: 1
+    In [5]: r.ttl(_4)
+    Out[5]: 86394L
 
 
 Verification Code::
