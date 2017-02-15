@@ -180,13 +180,13 @@ Out[4]: []
   In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
 
   In [3]: r.counter('a')
-  Out[3]: 1
+  Out[3]: (1, None, 1)  # cur, pre, incr
 
   In [4]: r._counter_key('a')
   Out[4]: 'redis:extensions:counter:a:20170215'
 
   In [5]: r.ttl(_4)
-  Out[5]: 86394L
+  Out[5]: 86390L
   ```
 
 * Verification Code

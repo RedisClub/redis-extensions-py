@@ -458,15 +458,15 @@ class TestRedisExtensionsCommands(object):
     # Counter Section
 
     def test_counter(self, r):
-        assert r.counter('a', amount=0) is None
+        assert r.counter('a', amount=0) == (None, None, 0)
 
-        assert r.counter('a') == 1
-        assert r.counter('a', amount=0) == 1
+        assert r.counter('a') == (1, None, 1)
+        assert r.counter('a', amount=0) == (1, 1, 0)
         assert r.ttl(r._counter_key('a'))
 
-        assert r.counter('a') == 2
-        assert r.counter('a', limit=2) == 2
-        assert r.counter('a', amount=0) == 2
+        assert r.counter('a') == (2, 1, 1)
+        assert r.counter('a', limit=2) == (2, 2, 0)
+        assert r.counter('a', amount=0) == (2, 2, 0)
 
         with pytest.raises(ValueError):
             r.multi_rpop('a', -1)
