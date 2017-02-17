@@ -769,16 +769,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __gvcode_key(self, name):
         return '{}graphic:vcode:{}'.format(KEY_PREFIX, name)
 
-    def gvcode_initial(self, num=10):
+    def gvcode_add(self, num=10):
         if num <= 0:
             raise ValueError('The num argument should be positive')
         gvcodes = (self.__gvcode_str() for _ in xrange(num))
         return self.sadd(self._gvcode_key(), *gvcodes)
 
-    def gvcode_add(self, num=10):
-        if num <= 0:
-            raise ValueError('The num argument should be positive')
-        return self.gvcode_initial(num=num)
+    def gvcode_initial(self, num=10):
+        return self.gvcode_add(num=num)
 
     def __gvcode_cut_num(self, num=10):
         # Prevent completely spopped

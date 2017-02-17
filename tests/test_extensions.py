@@ -530,12 +530,12 @@ class TestRedisExtensionsCommands(object):
     def __gvcode_test_key(self):
         return 'redis:extensions:graphic:vcode:a'
 
-    def test_gvcode_initial(self, r):
-        assert r.gvcode_initial(10) == 10
+    def test_gvcode_add(self, r):
+        assert r.gvcode_add(10) == 10
         assert r.scard(r._gvcode_key()) == 10
 
         with pytest.raises(ValueError):
-            r.gvcode_initial(0)
+            r.gvcode_add(0)
 
     def test_gvcode_cut(self, r):
         assert r.gvcode_add(10) == 10
