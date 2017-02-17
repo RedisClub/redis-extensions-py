@@ -770,25 +770,36 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return '{}graphic:vcode:{}'.format(KEY_PREFIX, name)
 
     def gvcode_initial(self, num=10):
+        if num <= 0:
+            raise ValueError('The num argument should be positive')
         gvcodes = (self.__gvcode_str() for _ in xrange(num))
         return self.sadd(self._gvcode_key(), *gvcodes)
 
     def gvcode_add(self, num=10):
+        if num <= 0:
+            raise ValueError('The num argument should be positive')
         return self.gvcode_initial(num=num)
 
     def __gvcode_cut_num(self, num=10):
         # Prevent completely spopped
         pre_num = self.scard(self._gvcode_key())
-        return pre_num - 1 if num >= pre_num else num
+        return max(pre_num - 1, 0) if num >= pre_num else num
 
     def gvcode_cut(self, num=10):
+        if num <= 0:
+            raise ValueError('The num argument should be positive')
         return self.multi_spop(self._gvcode_key(), num=self.__gvcode_cut_num(num=num))[-1]
 
     def gvcode_refresh(self, num=10):
-        return self.gvcode_cut(num=self.__gvcode_cut_num(num=num)), self.gvcode_add(num=num)
+        if num <= 0:
+            raise ValueError('The num argument should be positive')
+        cut_num = self.__gvcode_cut_num(num=num)
+        return cut_num and self.gvcode_cut(num=cut_num), self.gvcode_add(num=num)
 
     def gvcode_b64str(self, name, time=1800):
         gvcode = json.loads(self.srandmember(self._gvcode_key()) or '{}')
+        if not gvcode:
+            logger.warning('Gvcode not found, exec gvcode_add or gvcode_refresh first')
         b64str, vcode = gvcode.get('b64str', ''), gvcode.get('vcode', '')
         self.setex(self.__gvcode_key(name), time, vcode)
         return cc.Convert2Utf8(b64str)
