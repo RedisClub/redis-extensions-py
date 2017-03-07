@@ -403,6 +403,17 @@ class TestRedisExtensionsCommands(object):
         r.zincrbywithstamps('a', 'x', -1)
         assert r.zrawscore('a', 'x') == 0
 
+    # JSON Section
+
+    def test_set_json(self, r):
+        r.set_json('a', {'a': 1})
+        assert r.get('a') == '{"a": 1}'
+
+    def test_get_json(self, r):
+        j = {'a': 1}
+        r.set_json('a', j)
+        assert r.get_json('a') == j
+
     # Locks Section
 
     def test_acquire_lock(self, r):

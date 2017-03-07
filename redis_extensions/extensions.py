@@ -474,6 +474,38 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.rawscore(self.zscore(name, value))
 
+    # JSON Section
+    def set_json(self, name, value, ex=None, px=None, nx=False, xx=False, cls=None):
+        """
+        Set the value at key ``name`` to ``json dumps value``.
+
+        ``ex`` sets an expire flag on key ``name`` for ``ex`` seconds.
+
+        ``px`` sets an expire flag on key ``name`` for ``px`` milliseconds.
+
+        ``nx`` if set to True, set the value at key ``name`` to ``value`` if it does not already exist.
+
+        ``xx`` if set to True, set the value at key ``name`` to ``value`` if it already exists.
+        """
+        return self.set(name, json.dumps(value, cls=cls), ex=ex, px=px, nx=nx, xx=xx)
+
+    def setex_json(self, name, time, value, cls=None):
+        """
+        Set the value of key ``name`` to ``json dumps value`` that expires in ``time`` seconds.
+
+        ``time`` can be represented by an integer or a Python timedelta object.
+        """
+        return self.setex(name, time, json.dumps(value, cls=cls))
+
+    def setnx_json(self, name, value, cls=None):
+        """
+        Set the value of key ``name`` to ``json dumps value`` if key doesn't exist.
+        """
+        return self.setnx(name, json.dumps(value, cls=cls))
+
+    def get_json(self, name, default='{}'):
+        return json.loads(self.get(name) or default)
+
     # Locks Section
     def __lock_key(self, name):
         return '{}lock:{}'.format(KEY_PREFIX, name)
@@ -687,7 +719,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     def vcode(self, phone, ipaddr=None, quota=10, req_interval=60, black_list=True, ndigits=6, time=1800, code_cast_func=str):
         """
-        Generate verification code if not reach quota. Return a 2-item tuple: (Verification code, Whether reach quota or not, Whether in black list or not).
+        Generate verification code if not reach quota. Return a 3-item tuple: (Verification code, Whether reach quota or not, Whether in black list or not).
 
         ``quota`` indicates limitation of generating code, ``phone`` and ``ipaddr`` use in common, 0 for limitlessness.
 
@@ -918,6 +950,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     sortedpop = sorted_pop
     deletesadd = delete_sadd
     multispop = multi_spop
+    setjson = set_json
+    setexjson = setex_json
+    setnxjson = setnx_json
+    getjson = get_json
 
     # For backwards compatibility
     zgte = zge
