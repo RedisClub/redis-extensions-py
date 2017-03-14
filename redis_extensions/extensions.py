@@ -979,6 +979,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     setexjson = setex_json
     setnxjson = setnx_json
     getjson = get_json
+    hsetjson = hset_json
+    hsetnxjson = hsetnx_json
+    hmsetjson = hmset_json
+    hgetjson = hget_json
+    hmgetjson = hmget_json
+    hvalsjson = hvals_json
+    hgetalljson = hgetall_json
 
     # For backwards compatibility
     zgte = zge
