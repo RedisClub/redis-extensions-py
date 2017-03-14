@@ -506,6 +506,31 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def get_json(self, name, default='{}'):
         return json.loads(self.get(name) or default)
 
+    def hset_json(self, name, key, value, cls=None):
+        return self.hset(name, key, json.dumps(value, cls=cls))
+
+    def hsetnx_json(self, name, key, value, cls=None):
+        return self.hsetnx(name, key, json.dumps(value, cls=cls))
+
+    def hmset_json(self, name, mapping, cls=None):
+        mapping = {k: json.dumps(v, cls=cls) for (k, v) in iteritems(mapping)}
+        return self.hmset(name, mapping)
+
+    def hget_json(self, name, key, default='{}'):
+        return json.loads(self.hget(name, key) or default)
+
+    def hmget_json(self, name, keys, default='{}', *args):
+        vals = self.hmget(name, keys, *args)
+        return [json.loads(v or default) for v in vals]
+
+    def hvals_json(self, name, default='{}'):
+        vals = self.hvals(name)
+        return [json.loads(v or default) for v in vals]
+
+    def hgetall_json(self, name, default='{}'):
+        kvs = self.hgetall(name)
+        return {k: json.loads(v or default) for (k, v) in iteritems(kvs)}
+
     # Locks Section
     def __lock_key(self, name):
         return '{}lock:{}'.format(KEY_PREFIX, name)
