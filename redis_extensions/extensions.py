@@ -626,7 +626,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         name = '{}signin:info:{}'.format(KEY_PREFIX, signname)
         # Signin Info
-        signin_info = json.loads(self.get(name) or '{}')
+        signin_info = self.get_json(name)
         # Last Signin Date, Format ``%Y-%m-%d``
         last_signin_date = signin_info.get('signin_date', '1988-06-15')
         # Today Local Date, Format ``%Y-%m-%d``
@@ -715,14 +715,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         if amount < 0:
             raise ValueError('The amount argument should not be negative')
         name = self._counter_key(name, time_part_func=time_part_func)
-        pre_amount = self.get(name)
-        pre_amount = pre_amount and int(pre_amount)
+        pre_amount = self.get_int(name)
         if amount == 0:
             return pre_amount, pre_amount, 0
         amount = self.incr_limit(name, amount=amount, limit=limit)
         if amount == 1 and ex:
             self.expire(name, time)
-        return amount, pre_amount, amount - int(pre_amount or 0)
+        return amount, pre_amount, amount - pre_amount
 
     # Verification Codes Section
     def __black_list(self, value, cate='phone'):

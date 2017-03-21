@@ -490,9 +490,9 @@ class TestRedisExtensionsCommands(object):
     # Counter Section
 
     def test_counter(self, r):
-        assert r.counter('a', amount=0) == (None, None, 0)
+        assert r.counter('a', amount=0) == (0, 0, 0)
 
-        assert r.counter('a') == (1, None, 1)
+        assert r.counter('a') == (1, 0, 1)
         assert r.counter('a', amount=0) == (1, 1, 0)
         assert r.ttl(r._counter_key('a'))
 
