@@ -403,6 +403,18 @@ class TestRedisExtensionsCommands(object):
         r.zincrbywithstamps('a', 'x', -1)
         assert r.zrawscore('a', 'x') == 0
 
+    # INT Section
+
+    def test_get_int(self, r):
+        r.set('a', 1)
+        assert r.get('a') == '1'
+        assert r.get_int('a') == 1
+
+    def test_hget_int(self, r):
+        r.hset_json('a', 'a', 1)
+        assert r.hget('a', 'a') == '1'
+        assert r.hget_int('a', 'a') == 1
+
     # JSON Section
 
     def test_set_json(self, r):

@@ -474,6 +474,25 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.rawscore(self.zscore(name, value))
 
+    # INT Section
+    def get_int(self, name, default=0):
+        return int(self.get(name) or default)
+
+    def hget_int(self, name, key, default=0):
+        return int(self.hget(name, key) or default)
+
+    def hmget_int(self, name, keys, default=0, *args):
+        vals = self.hmget(name, keys, *args)
+        return [int(v or default) for v in vals]
+
+    def hvals_int(self, name, default=0):
+        vals = self.hvals(name)
+        return [int(v or default) for v in vals]
+
+    def hgetall_int(self, name, default=0):
+        kvs = self.hgetall(name)
+        return {k: int(v or default) for (k, v) in iteritems(kvs)}
+
     # JSON Section
     def set_json(self, name, value, ex=None, px=None, nx=False, xx=False, cls=None):
         """
@@ -975,6 +994,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     sortedpop = sorted_pop
     deletesadd = delete_sadd
     multispop = multi_spop
+    getint = get_int
+    hgetint = hget_int
+    hmgetint = hmget_int
+    hvalsint = hvals_int
+    hgetallint = hgetall_int
     setjson = set_json
     setexjson = setex_json
     setnxjson = setnx_json
