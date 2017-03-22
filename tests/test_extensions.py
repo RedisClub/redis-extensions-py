@@ -415,6 +415,24 @@ class TestRedisExtensionsCommands(object):
         assert r.hget('a', 'a') == '1'
         assert r.hget_int('a', 'a') == 1
 
+    # FLOAT Section
+
+    def test_get_float(self, r):
+        r.set('a', 1)
+        assert r.get('a') == '1'
+        assert r.get_float('a') == 1.0
+        r.set('a', 1.0)
+        assert r.get('a') == '1.0'
+        assert r.get_float('a') == 1.0
+
+    def test_hget_float(self, r):
+        r.hset_json('a', 'a', 1)
+        assert r.hget('a', 'a') == '1'
+        assert r.hget_float('a', 'a') == 1.0
+        r.hset_json('a', 'a', 1.0)
+        assert r.hget('a', 'a') == '1.0'
+        assert r.hget_float('a', 'a') == 1.0
+
     # JSON Section
 
     def test_set_json(self, r):

@@ -493,6 +493,25 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         kvs = self.hgetall(name)
         return {k: int(v or default) for (k, v) in iteritems(kvs)}
 
+    # FLOAT Section
+    def get_float(self, name, default=0):
+        return float(self.get(name) or default)
+
+    def hget_float(self, name, key, default=0):
+        return float(self.hget(name, key) or default)
+
+    def hmget_float(self, name, keys, default=0, *args):
+        vals = self.hmget(name, keys, *args)
+        return [float(v or default) for v in vals]
+
+    def hvals_float(self, name, default=0):
+        vals = self.hvals(name)
+        return [float(v or default) for v in vals]
+
+    def hgetall_float(self, name, default=0):
+        kvs = self.hgetall(name)
+        return {k: float(v or default) for (k, v) in iteritems(kvs)}
+
     # JSON Section
     def set_json(self, name, value, ex=None, px=None, nx=False, xx=False, cls=None):
         """
@@ -993,11 +1012,19 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     sortedpop = sorted_pop
     deletesadd = delete_sadd
     multispop = multi_spop
+    # INT
     getint = get_int
     hgetint = hget_int
     hmgetint = hmget_int
     hvalsint = hvals_int
     hgetallint = hgetall_int
+    # FLOAT
+    getfloat = get_float
+    hgetfloat = hget_float
+    hmgetfloat = hmget_float
+    hvalsfloat = hvals_float
+    hgetallfloat = hgetall_float
+    # JSON
     setjson = set_json
     setexjson = setex_json
     setnxjson = setnx_json
