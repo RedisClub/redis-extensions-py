@@ -142,7 +142,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         ``suffix`` for rename key ``name``, default ``del``.
         """
         try:
-            return self.pipeline().get(name).rename(name, '{}_{}'.format(name, suffix)).execute()
+            return self.pipeline().get(name).renamenx(name, '{}_{}'.format(name, suffix)).execute()
         except ResponseError:
             return [None, False]
 
