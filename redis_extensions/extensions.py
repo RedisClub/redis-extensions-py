@@ -512,6 +512,25 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         kvs = self.hgetall(name)
         return {k: float(v or default) for (k, v) in iteritems(kvs)}
 
+    # STR Section
+    def get_str(self, name, default=''):
+        return self.get(name) or default
+
+    def hget_str(self, name, key, default=''):
+        return self.hget(name, key) or default
+
+    def hmget_str(self, name, keys, default='', *args):
+        vals = self.hmget(name, keys, *args)
+        return [(v or default) for v in vals]
+
+    def hvals_str(self, name, default=''):
+        vals = self.hvals(name)
+        return [(v or default) for v in vals]
+
+    def hgetall_str(self, name, default=''):
+        kvs = self.hgetall(name)
+        return {k: (v or default) for (k, v) in iteritems(kvs)}
+
     # JSON Section
     def set_json(self, name, value, ex=None, px=None, nx=False, xx=False, cls=None):
         """
@@ -1024,6 +1043,12 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     hmgetfloat = hmget_float
     hvalsfloat = hvals_float
     hgetallfloat = hgetall_float
+    # STR
+    getstr = get_str
+    hgetstr = hget_str
+    hmgetstr = hmget_str
+    hvalsstr = hvals_str
+    hgetallstr = hgetall_str
     # JSON
     setjson = set_json
     setexjson = setex_json
