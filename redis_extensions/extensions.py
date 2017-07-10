@@ -66,6 +66,15 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 break
         return dels
 
+    def delete_yonks_unused_keys(self, pattern='*', iter=False, idletime=86400):
+        logger.warning('Not use in production, this func is just for manual delete keys which unused for yonks')
+        dels = 0
+        keys = self.scan_iter(pattern, dels) if iter else self.keys(pattern)
+        for key in keys:
+            if self.object('idletime', key) > idletime:
+                dels += self.delete()
+        return dels
+
     def incr_limit(self, name, amount=1, limit=None, value=None):
         """
         Increments the value of ``key`` by ``amount``. If no key exists, the value will be initialized as ``amount``.
