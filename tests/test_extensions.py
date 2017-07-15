@@ -631,6 +631,29 @@ class TestRedisExtensionsCommands(object):
         assert r.gvcode_exists('a', code.lower())
         assert r.gvcode_exists('a', code.upper())
 
+    # HotKey Section
+
+    def test_hotkey(self, r):
+        def gfunc():
+            return r.getint('a')
+
+        def sfunc():
+            r.set('a', 1)
+            return 1
+
+        result = r.hotkey(gfunc=gfunc, sfunc=sfunc)
+        assert result == 1
+
+        def gfunc(key):
+            return r.getint(key)
+
+        def sfunc(key):
+            r.set(key, 1)
+            return 1
+
+        result = r.hotkey(gfunc=gfunc, gargs=('b'), sfunc=sfunc, sargs=('b'))
+        assert result == 1
+
     # Compatibility Section
 
     def test_compatibility(self, r):

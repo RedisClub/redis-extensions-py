@@ -44,6 +44,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __local_ymd(self, format='%Y-%m-%d'):
         return tc.local_string(format=format)
 
+    def __uuid(self):
+        return str(uuid.uuid4())
+
     # Keys Section
     def delete_keys(self, pattern='*', iter=False, count=None):
         """
@@ -609,7 +612,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``acquire_timeout`` indicates retry time of acquiring lock.
         """
-        identifier = str(uuid.uuid4())
+        identifier = self.__uuid()
         end = mod_time.time() + acquire_timeout
         while mod_time.time() < end:
             if self.set(self.__lock_key(name), identifier, ex=time, nx=True):
@@ -731,7 +734,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``token_generate_func`` a callable used to generate the token.
         """
-        code = token_generate_func() if token_generate_func else str(uuid.uuid4())
+        code = token_generate_func() if token_generate_func else self.__uuid()
         token_key = self.__token_key(name)
         buf_code = self.getsetex(token_key, time, code) if ex else self.getset(token_key, code)
         if buf_code and buf:
@@ -932,15 +935,12 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return '{}queue:{}'.format(KEY_PREFIX, queue)
 
     def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):
-        identifier = str(uuid.uuid4())
-
+        identifier = self.__uuid()
         item = json.dumps([identifier, queue, name, args])
-
         if delay > 0:
             self.zadd(delayed, mod_time.time() + delay, item)
         else:
             self.rpush(self.__queue_key(queue), item)
-
         return identifier
 
     def __callable_func(self, f):
@@ -993,6 +993,24 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 self.rpush(self.__queue_key(queue), item)
 
             self.release_lock(identifier, locked)
+
+    # HotKey Section
+    def hotkey(self, gfunc=None, gargs=None, gkwargs=None, sfunc=None, sargs=None, skwargs=None, update_timeout=1000):
+        data = gfunc and gfunc(*(gargs or ()), **(gkwargs or {}))
+        if not data:
+            name = self.__uuid()
+            locked = self.acquire_lock(name)
+            if locked:
+                data = sfunc(*(sargs or ()), **(skwargs or {}))
+                self.release_lock(name, locked)
+            else:
+                end = mod_time.time() + update_timeout
+                while mod_time.time() < end:
+                    data = gfunc and gfunc(*(gargs or ()), **(gkwargs or {}))
+                    if data:
+                        return data
+                    mod_time.sleep(.001)
+        return data
 
     # For rename official function
     def georem(self, name, *values):
