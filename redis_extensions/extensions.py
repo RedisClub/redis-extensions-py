@@ -17,6 +17,8 @@ from redis.exceptions import ResponseError, WatchError
 from redis_extensions.expires import BaseRedisExpires
 from TimeConvert import TimeConvert as tc
 
+from .compat import basestring, bytes
+
 
 logger = logging.getLogger('redis_extensions')
 logger.addHandler(logging.StreamHandler())
@@ -41,11 +43,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         tc.__init__(timezone=self.timezone)
         super(StrictRedisExtensions, self).__init__(*args, **kwargs)
 
+    def __str(self, x):
+        return x if isinstance(x, basestring) else bytes(x)
+
     def __local_ymd(self, format='%Y-%m-%d'):
         return tc.local_string(format=format)
 
     def __uuid(self):
-        return str(uuid.uuid4())
+        return self.__str(uuid.uuid4())
 
     # Keys Section
     def delete_keys(self, pattern='*', iter=False, count=None):
@@ -188,7 +193,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         if force:
             return self.pipeline().lrem(name, 0, value).lpush(name, value).execute()
         else:
-            if not str(value) in self.lrange(name, 0, -1):
+            if not self.__str(value) in self.lrange(name, 0, -1):
                 return self.lpush(name, value)
 
     def rpush_nx(self, name, value, force=True):
@@ -200,7 +205,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         if force:
             return self.pipeline().lrem(name, 0, value).rpush(name, value).execute()
         else:
-            if not str(value) in self.lrange(name, 0, -1):
+            if not self.__str(value) in self.lrange(name, 0, -1):
                 return self.rpush(name, value)
 
     def push_nx(self, name, value, force=True):
@@ -745,7 +750,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Check token code exists or not.
         """
-        return str(code) in self.pipeline().get(self.__token_key(name)).get(self.__token_buffer_key(name)).execute()
+        return self.__str(code) in self.pipeline().get(self.__token_key(name)).get(self.__token_buffer_key(name)).execute()
 
     def token_delete(self, name):
         """
@@ -864,7 +869,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Check verification code exists or not.
         """
-        exists = self.get(self.__vcode_key(phone)) == str(code)
+        exists = self.get(self.__vcode_key(phone)) == self.__str(code)
         # Delete req stamp when vcode exists
         if exists:
             self.__req_stamp_delete(phone, cate='phone')

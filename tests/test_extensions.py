@@ -514,6 +514,7 @@ class TestRedisExtensionsCommands(object):
         token3 = r.token('a', buf=True, buf_time=1)
         time.sleep(1)
         assert not r.token_exists('a', token2)
+        assert not r.token_exists('a', u'中文')
 
     def test_token_delete(self, r):
         token = r.token('a')
