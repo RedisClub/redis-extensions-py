@@ -26,7 +26,7 @@ logger.setLevel(logging.INFO)
 
 
 KEY_PREFIX = 'redis:extensions:'  # Prefix of redis-extensions used key
-WARNING_LOG = '``{}`` used, may be very very very slow when keys\' amount very large'  # ``r.keys()`` and ``r.scan_iter()`` not support use
+WARNING_LOG = '``{0}`` used, may be very very very slow when keys\' amount very large'  # ``r.keys()`` and ``r.scan_iter()`` not support use
 
 
 class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
@@ -113,7 +113,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         if not re.match(r'^[><=]+$', cmp):
             raise ValueError('Cmp Value Incorrect')
         amount = self.incr(name, amount)
-        return amount, eval('{}{}{}'.format(amount, cmp, limit))
+        return amount, eval('{0}{1}{2}'.format(amount, cmp, limit))
 
     def incr_gt(self, name, amount=1, limit=0):
         amount = self.incr(name, amount)
@@ -131,7 +131,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         if not re.match(r'^[><=]+$', cmp):
             raise ValueError('Cmp Value Incorrect')
         amount = self.decr(name, amount)
-        return amount, eval('{}{}{}'.format(amount, cmp, limit))
+        return amount, eval('{0}{1}{2}'.format(amount, cmp, limit))
 
     def decr_lt(self, name, amount=1, limit=0):
         amount = self.decr(name, amount)
@@ -159,7 +159,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         ``suffix`` for rename key ``name``, default ``del``.
         """
         try:
-            return self.pipeline().get(name).renamenx(name, '{}_{}'.format(name, suffix)).execute()
+            return self.pipeline().get(name).renamenx(name, '{0}_{1}'.format(name, suffix)).execute()
         except ResponseError:
             return [None, False]
 
@@ -607,7 +607,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     # Locks Section
     def __lock_key(self, name):
-        return '{}lock:{}'.format(KEY_PREFIX, name)
+        return '{0}lock:{1}'.format(KEY_PREFIX, name)
 
     def acquire_lock(self, name, time=None, acquire_timeout=10):
         """
@@ -656,7 +656,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     # Quota Section
     def __quota_key(self, name):
-        return '{}quota:{}'.format(KEY_PREFIX, name)
+        return '{0}quota:{1}'.format(KEY_PREFIX, name)
 
     def __quota(self, quota_key, amount=10, time=None):
         num = self.incr(quota_key)
@@ -679,7 +679,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             signin_total_days
             signin_longest_days
         """
-        name = '{}signin:info:{}'.format(KEY_PREFIX, signname)
+        name = '{0}signin:info:{1}'.format(KEY_PREFIX, signname)
         # Signin Info
         signin_info = self.get_json(name)
         # Last Signin Date, Format ``%Y-%m-%d``
@@ -720,10 +720,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     # Token
     def __token_key(self, name):
-        return '{}token:{}'.format(KEY_PREFIX, name)
+        return '{0}token:{1}'.format(KEY_PREFIX, name)
 
     def __token_buffer_key(self, name):
-        return '{}token:buffer:{}'.format(KEY_PREFIX, name)
+        return '{0}token:buffer:{1}'.format(KEY_PREFIX, name)
 
     def token(self, name, ex=True, time=1800, buf=True, buf_time=300, token_generate_func=None):
         """
@@ -761,7 +761,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     # Counter
     def _counter_key(self, name, time_part_func=None):
         time_part = time_part_func() if time_part_func else self.__local_ymd(format='%Y%m%d')
-        return '{}counter:{}:{}'.format(KEY_PREFIX, name, time_part)
+        return '{0}counter:{1}:{2}'.format(KEY_PREFIX, name, time_part)
 
     def counter(self, name, amount=1, limit=None, ex=True, time=86400, time_part_func=None):
         """
@@ -780,14 +780,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     # Verification Codes Section
     def __black_list(self, value, cate='phone'):
-        black_key = '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
+        black_key = '{0}vcode:{1}:black:list'.format(KEY_PREFIX, cate)
         return self.sismember(black_key, value)
 
     def __vcode_key(self, phone):
-        return '{}vcode:{}'.format(KEY_PREFIX, phone)
+        return '{0}vcode:{1}'.format(KEY_PREFIX, phone)
 
     def __quota_key(self, value, cate='phone'):
-        return '{}vcode:{}:quota:{}'.format(KEY_PREFIX, cate, value)
+        return '{0}vcode:{1}:quota:{2}'.format(KEY_PREFIX, cate, value)
 
     def __quota_incr(self, value, cate='phone', quota=10):
         return self.__quota(self.__quota_key(value, cate=cate), amount=quota, time=86400)
@@ -799,13 +799,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.delete(self.__quota_key(value, cate=cate))
 
     def __req_stamp_key(self, value, cate='phone'):
-        return '{}vcode:{}:req:stamp:{}'.format(KEY_PREFIX, cate, value)
+        return '{0}vcode:{1}:req:stamp:{2}'.format(KEY_PREFIX, cate, value)
 
     def __req_stamp_delete(self, value, cate='phone'):
         return self.delete(self.__req_stamp_key(value, cate=cate))
 
     def __black_list_key(self, cate='phone'):
-        return '{}vcode:{}:black:list'.format(KEY_PREFIX, cate)
+        return '{0}vcode:{1}:black:list'.format(KEY_PREFIX, cate)
 
     def __req_interval(self, value, cate='phone', req_interval=60):
         curstamp = tc.utc_timestamp(ms=False)
@@ -894,10 +894,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         })
 
     def _gvcode_key(self):
-        return '{}graphic:vcode'.format(KEY_PREFIX)
+        return '{0}graphic:vcode'.format(KEY_PREFIX)
 
     def __gvcode_key(self, name):
-        return '{}graphic:vcode:{}'.format(KEY_PREFIX, name)
+        return '{0}graphic:vcode:{1}'.format(KEY_PREFIX, name)
 
     def gvcode_add(self, num=10):
         if num <= 0:
@@ -937,7 +937,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     # Delay Tasks Section
     def __queue_key(self, queue):
-        return '{}queue:{}'.format(KEY_PREFIX, queue)
+        return '{0}queue:{1}'.format(KEY_PREFIX, queue)
 
     def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):
         identifier = self.__uuid()
@@ -963,9 +963,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
-        logger.info('Available callbacks ({}):'.format(len(callbacks)))
+        logger.info('Available callbacks ({0}):'.format(len(callbacks)))
         for k, v in iteritems(callbacks):
-            logger.info('* {}: {}'.format(k, v))
+            logger.info('* {0}: {1}'.format(k, v))
 
         while True:
             item = self.zrange(delayed, 0, 0, withscores=True)
