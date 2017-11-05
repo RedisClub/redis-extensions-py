@@ -80,7 +80,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         keys = self.scan_iter(pattern, dels) if iter else self.keys(pattern)
         for key in keys:
             if self.object('idletime', key) > idletime:
-                dels += self.delete()
+                dels += self.delete(key)
         return dels
 
     def incr_limit(self, name, amount=1, limit=None, value=None):
