@@ -20,7 +20,7 @@ setup(
 
     packages=['redis_extensions'],
     py_modules=[],
-    install_requires=['CodeConvert', 'TimeConvert', 'redis', 'verification-code', 'graphic-verification-code'],
+    install_requires=['CodeConvert', 'TimeConvert', 'redis', 'verification-code', 'graphic-verification-code>=1.0.2'],
 
     classifiers=[
         "License :: OSI Approved :: BSD License",
