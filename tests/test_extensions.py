@@ -500,6 +500,12 @@ class TestRedisExtensionsCommands(object):
         assert not r.quota('a', amount=1)
         assert r.quota('a', amount=1)
 
+    # Quote/UnQuote Section
+    def test_quote_unquote(self, r):
+        lurl = 'http://a.com'
+        identifier = r.quote(lurl)
+        assert r.unquote(identifier) == lurl
+
     # Token Section
 
     def test_token(self, r):

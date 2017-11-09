@@ -112,6 +112,19 @@ Out[4]: []
   Out[4]: True
   ```
 
+* Quote/UnQuote
+  ```python
+  In [1]: import redis_extensions as redis
+
+  In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+
+  In [3]: r.quote('http://a.com')
+  Out[3]: '6eb19fa3-9e26-457b-bb88-83ea5927ac29'
+
+  In [4]: r.unquote('6eb19fa3-9e26-457b-bb88-83ea5927ac29')
+  Out[4]: 'http://a.com'
+  ```
+
 * Token
   ```python
   In [1]: import redis_extensions as redis
