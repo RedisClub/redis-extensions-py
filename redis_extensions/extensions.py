@@ -676,12 +676,12 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     def quote(self, s, ex=True, time=1800):
         identifier = self.__uuid()
-        identifier_key = self.__quota_key(identifier)
+        identifier_key = self.__quote_key(identifier)
         self.setex(identifier_key, time, s) if ex else self.set(identifier_key, s)
         return identifier
 
     def unquote(self, identifier, buf=False):
-        identifier_key = self.__quota_key(identifier)
+        identifier_key = self.__quote_key(identifier)
         return self.get(identifier_key) if buf else self.get_delete(identifier_key)[0]
 
     # SignIns Section
