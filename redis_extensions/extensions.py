@@ -10,7 +10,7 @@ import uuid
 
 import gvcode
 import shortuuid
-import vcode
+import vcode as mod_vcode
 from CodeConvert import CodeConvert as cc
 from redis import StrictRedis
 from redis._compat import iteritems, xrange
@@ -867,7 +867,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             # Ipaddr Interval If `ipaddr`` Isn't ``None``
             if ipaddr and self.__req_interval(ipaddr, cate='ipaddr', req_interval=req_interval):
                 return None, False, True
-        code = vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
+        code = mod_vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
         self.setex(self.__vcode_key(phone), time, code)
         # Delete vcode exists quota key
         self.__quota_delete(phone, cate='exists')
