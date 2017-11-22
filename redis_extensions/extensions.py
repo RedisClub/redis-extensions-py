@@ -9,6 +9,7 @@ import time as mod_time
 import uuid
 
 import gvcode
+import shortuuid
 import vcode
 from CodeConvert import CodeConvert as cc
 from redis import StrictRedis
@@ -49,8 +50,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __local_ymd(self, format='%Y-%m-%d'):
         return tc.local_string(format=format)
 
-    def __uuid(self):
-        return self.__str(uuid.uuid4())
+    def __uuid(self, short_uuid=False):
+        return self.__str(shortuuid.uuid() if short_uuid else uuid.uuid4())
 
     # Keys Section
     def delete_keys(self, pattern='*', iter=False, count=None):
@@ -609,7 +610,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __lock_key(self, name):
         return '{0}lock:{1}'.format(KEY_PREFIX, name)
 
-    def acquire_lock(self, name, time=None, acquire_timeout=10):
+    def acquire_lock(self, name, time=None, acquire_timeout=10, short=False):
         """
         Acquire lock for ``name``.
 
@@ -617,7 +618,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``acquire_timeout`` indicates retry time of acquiring lock.
         """
-        identifier = self.__uuid()
+        identifier = self.__uuid(short)
         end = mod_time.time() + acquire_timeout
         while mod_time.time() < end:
             if self.set(self.__lock_key(name), identifier, ex=time, nx=True):
@@ -674,8 +675,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __quote_key(self, name):
         return '{0}quote:{1}'.format(KEY_PREFIX, name)
 
-    def quote(self, s, ex=True, time=1800):
-        identifier = self.__uuid()
+    def quote(self, s, ex=True, time=1800, short_uuid=False):
+        identifier = self.__uuid(short_uuid)
         identifier_key = self.__quote_key(identifier)
         self.setex(identifier_key, time, s) if ex else self.set(identifier_key, s)
         return identifier
@@ -739,7 +740,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __token_buffer_key(self, name):
         return '{0}token:buffer:{1}'.format(KEY_PREFIX, name)
 
-    def token(self, name, ex=True, time=1800, buf=True, buf_time=300, token_generate_func=None):
+    def token(self, name, ex=True, time=1800, buf=True, buf_time=300, short_uuid=True, token_generate_func=None):
         """
         Generate token.
 
@@ -753,7 +754,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``token_generate_func`` a callable used to generate the token.
         """
-        code = token_generate_func() if token_generate_func else self.__uuid()
+        code = token_generate_func() if token_generate_func else self.__uuid(short_uuid)
         token_key = self.__token_key(name)
         buf_code = self.getsetex(token_key, time, code) if ex else self.getset(token_key, code)
         if buf_code and buf:
@@ -953,8 +954,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __queue_key(self, queue):
         return '{0}queue:{1}'.format(KEY_PREFIX, queue)
 
-    def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0):
-        identifier = self.__uuid()
+    def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0, short_uuid=False):
+        identifier = self.__uuid(short_uuid)
         item = json.dumps([identifier, queue, name, args])
         if delay > 0:
             self.zadd(delayed, mod_time.time() + delay, item)
@@ -1014,10 +1015,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             self.release_lock(identifier, locked)
 
     # HotKey Section
-    def hotkey(self, gfunc=None, gargs=None, gkwargs=None, sfunc=None, sargs=None, skwargs=None, update_timeout=1000):
+    def hotkey(self, gfunc=None, gargs=None, gkwargs=None, sfunc=None, sargs=None, skwargs=None, update_timeout=1000, short_uuid=False):
         data = gfunc and gfunc(*(gargs or ()), **(gkwargs or {}))
         if not data:
-            name = self.__uuid()
+            name = self.__uuid(short_uuid)
             locked = self.acquire_lock(name)
             if locked:
                 data = sfunc(*(sargs or ()), **(skwargs or {}))
