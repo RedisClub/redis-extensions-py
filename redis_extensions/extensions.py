@@ -1113,3 +1113,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     zgte = zge
     zlte = zle
     vcode_status = vcode_exists
+
+    # Delete => Del
+    delkeys = del_keys = delete_keys
+    getdel = get_del = get_delete
+    multilpopdel = multi_lpop_del = multi_lpop_delete
+    multirpopdel = multi_rpop_del = multi_rpop_delete
+    multipopdel = multi_pop_del = multi_pop_delete
+    dellpush = del_lpush = delete_lpush
+    delrpush = del_rpush = delete_rpush
+    delpush = del_push = delete_push
+    delsadd = del_sadd = delete_sadd
