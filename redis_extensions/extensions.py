@@ -822,6 +822,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __black_list_key(self, cate='phone'):
         return '{0}vcode:{1}:black:list'.format(KEY_PREFIX, cate)
 
+    def __final_code(self, code, ignore_blank=True):
+        final_code = code or ''
+        final_code = (final_code.replace(' ', '') if ignore_blank else final_code).lower()
+        return final_code
+
     def __req_interval(self, value, cate='phone', req_interval=60):
         curstamp = tc.utc_timestamp(ms=False)
         laststamp = int(self.getset(self.__req_stamp_key(value, cate=cate), curstamp) or 0)
@@ -880,11 +885,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return self.__quota_num(ipaddr, cate='ipaddr')
         return self.__quota_num(phone, cate='phone'), self.__quota_num(ipaddr, cate='ipaddr')
 
-    def vcode_exists(self, phone, code, ipaddr=None, keep=False, quota=3):
+    def vcode_exists(self, phone, code, ipaddr=None, keep=False, quota=3, ignore_blank=True):
         """
         Check verification code exists or not.
         """
-        exists = self.get(self.__vcode_key(phone)) == self.__str(code)
+        exists = self.get(self.__vcode_key(phone)) == self.__final_code(self.__str(code), ignore_blank=ignore_blank)
         # Delete req stamp when vcode exists
         if exists:
             self.__req_stamp_delete(phone, cate='phone')
@@ -947,8 +952,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.setex(self.__gvcode_key(name), time, vcode)
         return cc.Convert2Utf8(b64str)
 
-    def gvcode_exists(self, name, code):
-        return (self.get(self.__gvcode_key(name)) or '').lower() == (code or '').lower()
+    def gvcode_exists(self, name, code, ignore_blank=True):
+        return (self.get(self.__gvcode_key(name)) or '').lower() == self.__final_code(code, ignore_blank=ignore_blank)
 
     # Delay Tasks Section
     def __queue_key(self, queue):
