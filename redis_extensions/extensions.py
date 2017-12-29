@@ -209,12 +209,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             if not self.__str(value) in self.lrange(name, 0, -1):
                 return self.rpush(name, value)
 
-    def push_nx(self, name, value, force=True):
-        """
-        Alias for lpush_nx.
-        """
-        return self.lpush_nx(name, value, force)
-
     def multi_lpop(self, name, num=1):
         """
         Pop multi items from the head of the list ``name``.
@@ -230,12 +224,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         if num < 0:
             raise ValueError('The num argument should not be negative')
         return self.pipeline().lrange(name, -num, -1).ltrim(name, 0, -num - 1).llen(name).execute()
-
-    def multi_pop(self, name, num=1):
-        """
-        Alias for multi_lpop.
-        """
-        return self.multi_lpop(name, num)
 
     def multi_lpop_delete(self, name, num=1):
         """
@@ -253,12 +241,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             raise ValueError('The num argument should not be negative')
         return self.pipeline().lrange(name, -num, -1).delete(name).execute()
 
-    def multi_pop_delete(self, name, num=1):
-        """
-        Alias for multi_lpop_delete.
-        """
-        return self.multi_lpop_delete(name, num)
-
     def trim_lpush(self, name, num, *values):
         """
         Push ``values`` onto the head of the list ``name`` & Limit ``num`` from the head of the list ``name``.
@@ -271,12 +253,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.pipeline().rpush(name, *values).ltrim(name, -num, - 1).llen(name).execute()
 
-    def trim_push(self, name, num, *values):
-        """
-        Alias for trim_lpush.
-        """
-        return self.trim_lpush(name, num, *values)
-
     def delete_lpush(self, name, *values):
         """
         Delete key specified by ``name`` & Push ``values`` onto the head of the list ``name``.
@@ -288,12 +264,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         Delete key specified by ``name`` & Push ``values`` onto the tail of the list ``name``.
         """
         return self.pipeline().delete(name).rpush(name, *values).execute()[::-1]
-
-    def delete_push(self, name, *values):
-        """
-        Alias for delete_lpush.
-        """
-        return self.delete_lpush(name, *values)
 
     def lpush_ex(self, name, time, value):
         """
@@ -612,26 +582,17 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def rpush_json(self, name, value, cls=None):
         return self.rpush(name, json.dumps(value, cls=cls))
 
-    def push_json(self, name, value, cls=None):
-        return self.lpush_json(name, value, cls=cls)
-
     def lpushx_json(self, name, value, cls=None):
         return self.lpushx(name, json.dumps(value, cls=cls))
 
     def rpushx_json(self, name, value, cls=None):
         return self.rpushx(name, json.dumps(value, cls=cls))
 
-    def pushx_json(self, name, value, cls=None):
-        return self.lpushx_json(name, value, cls=cls)
-
     def lpushnx_json(self, name, value, cls=None, force=True):
         return self.lpushnx(name, json.dumps(value, cls=cls), force=force)
 
     def rpushnx_json(self, name, value, cls=None, force=True):
         return self.rpushnx(name, json.dumps(value, cls=cls), force=force)
-
-    def pushnx_json(self, name, value, cls=None, force=True):
-        return self.lpushnx_json(name, json.dumps(value, cls=cls), force=force)
 
     # Locks Section
     def __lock_key(self, name):
@@ -1090,21 +1051,16 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     getrename = get_rename
     getorset = get_or_set
     getorsetex = get_or_setex
-    lpushnx = lpush_nx
+    lpushnx = pushnx = push_nx = lpush_nx
     rpushnx = rpush_nx
-    pushnx = push_nx
-    multilpop = multi_lpop
+    multilpop = multipop = multi_pop = multi_lpop
     multirpop = multi_rpop
-    multipop = multi_pop
-    multilpopdelete = multi_lpop_delete
+    multilpopdelete = multipopdelete = multi_pop_delete = multi_lpop_delete
     multirpopdelete = multi_rpop_delete
-    multipopdelete = multi_pop_delete
-    trimlpush = trim_lpush
+    trimlpush = trimpush = trim_push = trim_lpush
     trimrpush = trim_rpush
-    trimpush = trim_push
-    deletelpush = delete_lpush
+    deletelpush = deletepush = delete_push = delete_lpush
     deleterpush = delete_rpush
-    deletepush = delete_push
     lpushex = lpush_ex
     lrangeex = lrange_ex
     sortedpop = sorted_pop
@@ -1141,17 +1097,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     hvalsjson = hvals_json
     hgetalljson = hgetall_json
 
-    lpushjson = lpush_json
+    lpushjson = pushjson = push_json = lpush_json
     rpushjson = rpush_json
-    pushjson = push_json
 
-    lpushxjson = lpushx_json
+    lpushxjson = pushxjson = pushx_json = lpushx_json
     rpushxjson = rpushx_json
-    pushxjson = pushx_json
 
-    lpushnxjson = lpushnx_json
+    lpushnxjson = pushnxjson = pushnx_json = lpushnx_json
     rpushnxjson = rpushnx_json
-    pushnxjson = pushnx_json
 
     # For backwards compatibility
     zgte = zge
@@ -1161,10 +1114,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     # Delete => Del
     delkeys = del_keys = delete_keys
     getdel = get_del = get_delete
-    multilpopdel = multi_lpop_del = multi_lpop_delete
+    multilpopdel = multi_lpop_del = multipopdel = multi_pop_del = multi_lpop_delete
     multirpopdel = multi_rpop_del = multi_rpop_delete
-    multipopdel = multi_pop_del = multi_pop_delete
-    dellpush = del_lpush = delete_lpush
+    dellpush = del_lpush = delpush = del_push = delete_lpush
     delrpush = del_rpush = delete_rpush
-    delpush = del_push = delete_push
     delsadd = del_sadd = delete_sadd
