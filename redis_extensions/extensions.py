@@ -606,6 +606,33 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         kvs = self.hgetall(name)
         return {k: json.loads(v or default) for (k, v) in iteritems(kvs)}
 
+    def lpush_json(self, name, value, cls=None):
+        return self.lpush(name, json.dumps(value, cls=cls))
+
+    def rpush_json(self, name, value, cls=None):
+        return self.rpush(name, json.dumps(value, cls=cls))
+
+    def push_json(self, name, value, cls=None):
+        return self.lpush_json(name, value, cls=cls)
+
+    def lpushx_json(self, name, value, cls=None):
+        return self.lpushx(name, json.dumps(value, cls=cls))
+
+    def rpushx_json(self, name, value, cls=None):
+        return self.rpushx(name, json.dumps(value, cls=cls))
+
+    def pushx_json(self, name, value, cls=None):
+        return self.lpushx_json(name, value, cls=cls)
+
+    def lpushnx_json(self, name, value, cls=None, force=True):
+        return self.lpushnx(name, json.dumps(value, cls=cls), force=force)
+
+    def rpushnx_json(self, name, value, cls=None, force=True):
+        return self.rpushnx(name, json.dumps(value, cls=cls), force=force)
+
+    def pushnx_json(self, name, value, cls=None, force=True):
+        return self.lpushnx_json(name, json.dumps(value, cls=cls), force=force)
+
     # Locks Section
     def __lock_key(self, name):
         return '{0}lock:{1}'.format(KEY_PREFIX, name)
@@ -1113,6 +1140,18 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     hmgetjson = hmget_json
     hvalsjson = hvals_json
     hgetalljson = hgetall_json
+
+    lpushjson = lpush_json
+    rpushjson = rpush_json
+    pushjson = push_json
+
+    lpushxjson = lpushx_json
+    rpushxjson = rpushx_json
+    pushxjson = pushx_json
+
+    lpushnxjson = lpushnx_json
+    rpushnxjson = rpushnx_json
+    pushnxjson = pushnx_json
 
     # For backwards compatibility
     zgte = zge

@@ -469,6 +469,16 @@ class TestRedisExtensionsCommands(object):
         r.hset_json('a', 'a', j)
         assert r.hget_json('a', 'a') == j
 
+    def test_lpush_json(self, r):
+        j = {'a': 1}
+        r.lpush_json('a', j)
+        assert r.lpop('a') == '{"a": 1}'
+
+    def test_rpush_json(self, r):
+        j = {'a': 1}
+        r.rpush_json('a', j)
+        assert r.lpop('a') == '{"a": 1}'
+
     # Locks Section
 
     def test_acquire_lock(self, r):
