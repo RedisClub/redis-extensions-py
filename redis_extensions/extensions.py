@@ -26,7 +26,7 @@ logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
 
-KEY_PREFIX = 'redis:extensions:'  # Prefix of redis-extensions used key
+KEY_PREFIX = 'r:'  # Prefix of redis-extensions used key
 WARNING_LOG = '``{0}`` used, may be very very very slow when keys\' amount very large'  # ``r.keys()`` and ``r.scan_iter()`` not support use
 
 

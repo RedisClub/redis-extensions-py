@@ -488,9 +488,9 @@ class TestRedisExtensionsCommands(object):
         assert not r.acquire_lock('a', acquire_timeout=0.05)
         # Acquire Lock Auto Release
         assert r.acquire_lock('b', time=1)
-        assert r.exists('redis:extensions:lock:b')
+        assert r.exists('r:lock:b')
         time.sleep(1)
-        assert not r.exists('redis:extensions:lock:b')
+        assert not r.exists('r:lock:b')
 
     def test_release_lock(self, r):
         identifier = r.acquire_lock('a')
@@ -561,7 +561,7 @@ class TestRedisExtensionsCommands(object):
         code, overtop, blacklist = r.vcode(phone)
         assert len(code) == 6
         assert not overtop
-        assert r.exists('redis:extensions:vcode:phone:quota:' + phone)
+        assert r.exists('r:vcode:phone:quota:' + phone)
         code, overtop, blacklist = r.vcode(phone, quota=1, req_interval=0)
         assert not code
         assert overtop
@@ -611,7 +611,7 @@ class TestRedisExtensionsCommands(object):
     # Graphic Verification Codes Section
 
     def __gvcode_test_key(self):
-        return 'redis:extensions:graphic:vcode:a'
+        return 'r:graphic:vcode:a'
 
     def test_gvcode_add(self, r):
         assert r.gvcode_add(10) == 10
