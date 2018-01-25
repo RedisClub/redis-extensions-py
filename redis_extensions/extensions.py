@@ -594,6 +594,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def rpushnx_json(self, name, value, cls=None, force=True):
         return self.rpushnx(name, json.dumps(value, cls=cls), force=force)
 
+    def blpop_json(self, keys, timeout=0, cls=None):
+        kv = self.blpop(keys, timeout=timeout)
+        return (kv[0], json.loads(kv[1], cls=cls)) if kv else (None, None)
+
+    def brpop_json(self, keys, timeout=0, cls=None):
+        kv = self.brpop(keys, timeout=timeout)
+        return (kv[0], json.loads(kv[1], cls=cls)) if kv else (None, None)
+
     # Locks Section
     def __lock_key(self, name):
         return '{0}lock:{1}'.format(KEY_PREFIX, name)
@@ -1105,6 +1113,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     lpushnxjson = pushnxjson = pushnx_json = lpushnx_json
     rpushnxjson = rpushnx_json
+
+    bpopjson = blpopjson = blpop_json
+    brpopjson = brpop_json
 
     # For backwards compatibility
     zgte = zge

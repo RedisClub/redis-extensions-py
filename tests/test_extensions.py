@@ -479,6 +479,20 @@ class TestRedisExtensionsCommands(object):
         r.rpush_json('a', j)
         assert r.lpop('a') == '{"a": 1}'
 
+    def test_blpop_json(self, r):
+        j = {'a': 1}
+        r.lpush_json('a', j)
+        k, v = r.blpop_json('a', timeout=60)
+        assert k == 'a'
+        assert v == j
+
+    def test_brpop_json(self, r):
+        j = {'a': 1}
+        r.rpush_json('a', j)
+        k, v = r.brpop_json('a', timeout=60)
+        assert k == 'a'
+        assert v == j
+
     # Locks Section
 
     def test_acquire_lock(self, r):
