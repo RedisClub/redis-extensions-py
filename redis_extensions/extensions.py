@@ -955,13 +955,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __queue_key(self, queue):
         return '{0}queue:{1}'.format(KEY_PREFIX, queue)
 
-    def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0, short_uuid=False):
+    def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0, short_uuid=False, enable_queue=False):
         identifier = self.__uuid(short_uuid)
         item = json.dumps([identifier, queue, name, args])
         if delay > 0:
             self.zadd(delayed, mod_time.time() + delay, item)
         else:
-            self.rpush(self.__queue_key(queue), item)
+            if enable_queue:
+                self.rpush(self.__queue_key(queue), item)
         return identifier
 
     def __callable_func(self, f):
@@ -975,7 +976,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             logger.error(e)
             return None
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_queue=False):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
@@ -1011,7 +1012,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                     continue
 
             if self.zrem(delayed, item):
-                self.rpush(self.__queue_key(queue), item)
+                if enable_queue:
+                    self.rpush(self.__queue_key(queue), item)
 
             self.release_lock(identifier, locked)
 
