@@ -656,7 +656,6 @@ class TestRedisExtensionsCommands(object):
 
     def test_gvcode_exists(self, r):
         b64str = r.gvcode_b64str('a')
-        assert r.gvcode_exists('a', None)
         code = r.get(self.__gvcode_test_key())
         assert r.gvcode_exists('a', code)
         assert r.gvcode_exists('a', code.lower())

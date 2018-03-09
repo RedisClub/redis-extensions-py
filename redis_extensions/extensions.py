@@ -75,6 +75,21 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 break
         return dels
 
+    def __todel(self, key, matched_list):
+        for matched in matched_list:
+            if matched in key:
+                return False
+        return True
+
+    def delete_unmatched_keys(self, pattern='*', matched_list=[], iter=False):
+        logger.warning('Not use in production, this func is just for manual delete keys which unused for yonks')
+        dels = 0
+        keys = self.scan_iter(pattern, dels) if iter else self.keys(pattern)
+        for key in keys:
+            if self.__todel(key, matched_list):
+                dels += self.delete(key)
+        return dels
+
     def delete_yonks_unused_keys(self, pattern='*', iter=False, idletime=86400):
         logger.warning('Not use in production, this func is just for manual delete keys which unused for yonks')
         dels = 0
@@ -940,10 +955,16 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         cut_num = self.__gvcode_cut_num(num=num)
         return cut_num and self.gvcode_cut(num=cut_num), self.gvcode_add(num=num)
 
+    def __gvcode_b64str(self):
+        return json.loads(self.srandmember(self._gvcode_key()) or '{}')
+
     def gvcode_b64str(self, name, time=1800):
-        gvcode = json.loads(self.srandmember(self._gvcode_key()) or '{}')
+        gvcode = self.__gvcode_b64str()
         if not gvcode:
-            logger.warning('Gvcode not found, exec gvcode_add or gvcode_refresh first')
+            self.gvcode_refresh()
+            gvcode = self.__gvcode_b64str()
+            if not gvcode:
+                logger.warning('Gvcode not found, exec gvcode_add or gvcode_refresh first')
         b64str, vcode = gvcode.get('b64str', ''), gvcode.get('vcode', '')
         self.setex(self.__gvcode_key(name), time, vcode)
         return cc.Convert2Utf8(b64str)
