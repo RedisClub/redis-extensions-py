@@ -397,6 +397,13 @@ class TestRedisExtensionsCommands(object):
         assert r.zmin('a') == 'x'
         assert r.zmin('a', withscores=True) == ('x', 1.0)
 
+    def test_ztopn(self, r):
+        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        assert r.ztopn('a', 2) == ['zz', 'z']
+        assert r.ztopn('a', 2, desc=False) == ['x', 'xx']
+        assert r.zistopn('a', 'z', 2)
+        assert not r.zistopn('a', 'x', 2)
+
     def test_zrawscore(self, r):
         r.zaddwithstamps('a', x=1)
         assert r.zrawscore('a', 'x') == 1

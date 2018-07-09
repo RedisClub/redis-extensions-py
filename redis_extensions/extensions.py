@@ -420,6 +420,12 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return
         return self.zgtcount(name, score)
 
+    def ztopn(self, name, count, desc=True, withscores=False, score_cast_func=float):
+        return self.zrange(name, 0, count - 1, desc=desc, withscores=withscores, score_cast_func=score_cast_func)
+
+    def zistopn(self, name, value, count):
+        return value in self.ztopn(name, count, withscores=False)
+
     def zmax(self, name, withscores=False, score_cast_func=float):
         """
         Return ``max`` value from sorted set ``name``.
@@ -430,7 +436,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         ``score_cast_func`` a callable used to cast the score return value.
         """
         try:
-            return self.zrevrange(name, 0, 0, withscores=withscores, score_cast_func=score_cast_func)[0]
+            return self.ztopn(name, 1, desc=True, withscores=withscores, score_cast_func=score_cast_func)[0]
         except IndexError:
             return
 
@@ -444,7 +450,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         ``score_cast_func`` a callable used to cast the score return value.
         """
         try:
-            return self.zrange(name, 0, 0, withscores=withscores, score_cast_func=score_cast_func)[0]
+            return self.ztopn(name, 1, desc=False, withscores=withscores, score_cast_func=score_cast_func)[0]
         except IndexError:
             return
 
