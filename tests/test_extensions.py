@@ -143,6 +143,11 @@ class TestRedisExtensionsCommands(object):
         assert amount == -2
         assert not eq
 
+    def test_quiet_rename(self, r):
+        assert not r.quiet_rename('a', 'aa')
+        r.set('a', 1)
+        assert r.quiet_rename('a', 'aa')
+
     # Strings Section
 
     def test_get_delete(self, r):

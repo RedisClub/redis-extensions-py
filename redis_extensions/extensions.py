@@ -53,7 +53,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __uuid(self, short_uuid=False):
         return self.__str(shortuuid.uuid() if short_uuid else uuid.uuid4())
 
-    # Keys Section
+    # Keys Section(Delete Relative)
     def delete_keys(self, pattern='*', iter=False, count=None):
         """
         Delete a list of keys matching ``pattern``.
@@ -99,6 +99,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 dels += self.delete(key)
         return dels
 
+    # Keys Section(Incr/Decr Relative)
     def incr_limit(self, name, amount=1, limit=None, value=None):
         """
         Increments the value of ``key`` by ``amount``. If no key exists, the value will be initialized as ``amount``.
@@ -160,6 +161,15 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def decr_eq(self, name, amount=1, limit=0):
         amount = self.decr(name, amount)
         return amount, amount == limit
+
+    # # Keys Section(Rename Relative)
+    def quiet_rename(self, src, dst):
+        if self.exists(src):
+            try:
+                return self.rename(src, dst)
+            except ResponseError:
+                pass
+        return False
 
     # Strings Section
     def get_delete(self, name):
