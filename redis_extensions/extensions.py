@@ -338,6 +338,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return eles, sum(x is not None for x in eles)
 
     def srandmember_shuffle(self, name, number=None):
+        # https://github.com/antirez/redis/blob/e4903ce586c191fe4699913a5e360e12812024a3/src/t_set.c#L616
+        # Srandmember isn't random enough
+        # When number is close to ``the number of elements inside the set``
         memebers = self.srandmember(name, number=number)
         random.shuffle(memebers)
         return memebers
