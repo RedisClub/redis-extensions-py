@@ -4,6 +4,7 @@ import datetime
 import importlib
 import json
 import logging
+import random
 import re
 import time as mod_time
 import uuid
@@ -335,6 +336,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             p.spop(name)
         eles = p.execute()
         return eles, sum(x is not None for x in eles)
+
+    def srandmember_shuffle(self, name, number=None):
+        memebers = self.srandmember(name, number=number)
+        random.shuffle(memebers)
+        return memebers
 
     # ZSorts(Sorted Sets) Section
     def __list_substractor(self, minuend, subtrahend):
@@ -1113,6 +1119,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     sortedpop = sorted_pop
     deletesadd = delete_sadd
     multispop = multi_spop
+    srandshuffle = srandmembershuffle = srandmember_shuffle
     # INT
     getint = get_int
     hgetint = hget_int

@@ -336,6 +336,11 @@ class TestRedisExtensionsCommands(object):
         assert len(eles) == 10
         assert num == 5
 
+    def test_srandmember_shuffle(self, r):
+        r.sadd('a', *range(10))
+        eles = r.srandmember_shuffle('a', 5)
+        assert len(eles) == 5
+
     # ZSorts(Sorted Sets) Section
 
     def test_zgt(self, r):
