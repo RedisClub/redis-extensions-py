@@ -983,7 +983,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __gvcode_b64str(self):
         return json.loads(self.srandmember(self._gvcode_key()) or '{}')
 
-    def gvcode_b64str(self, name, time=1800):
+    def gvcode_b64str(self, name, time=1800, data_uri_scheme=False):
         gvcode = self.__gvcode_b64str()
         if not gvcode:
             self.gvcode_refresh()
@@ -992,7 +992,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 logger.warning('Gvcode not found, exec gvcode_add or gvcode_refresh first')
         b64str, vcode = gvcode.get('b64str', ''), gvcode.get('vcode', '')
         self.setex(self.__gvcode_key(name), time, vcode)
-        return cc.Convert2Utf8(b64str)
+        return '{0}{1}'.format('data:image/png;base64,' if data_uri_scheme else '', cc.Convert2Utf8(b64str))
 
     def gvcode_exists(self, name, code, ignore_blank=True):
         return (self.get(self.__gvcode_key(name)) or '').lower() == self.__final_code(code, ignore_blank=ignore_blank)
