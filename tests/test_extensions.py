@@ -496,6 +496,18 @@ class TestRedisExtensionsCommands(object):
         r.rpush_json('a', j)
         assert r.lpop('a') == '{"a": 1}'
 
+    def test_lpop_json(self, r):
+        j = {'a': 1}
+        r.lpush_json('a', j)
+        assert r.lpop_json('a') == j
+        assert r.lpop_json('a') == {}
+
+    def test_rpop_json(self, r):
+        j = {'a': 1}
+        r.lpush_json('a', j)
+        assert r.rpop_json('a') == j
+        assert r.rpop_json('a') == {}
+
     def test_blpop_json(self, r):
         j = {'a': 1}
         r.lpush_json('a', j)

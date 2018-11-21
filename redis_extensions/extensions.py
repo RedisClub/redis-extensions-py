@@ -634,6 +634,12 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def rpushnx_json(self, name, value, cls=None, force=True):
         return self.rpushnx(name, json.dumps(value, cls=cls), force=force)
 
+    def lpop_json(self, name, default='{}'):
+        return json.loads(self.lpop(name) or default)
+
+    def rpop_json(self, name, default='{}'):
+        return json.loads(self.rpop(name) or default)
+
     def blpop_json(self, keys, timeout=0, cls=None):
         kv = self.blpop(keys, timeout=timeout)
         return (kv[0], json.loads(kv[1], cls=cls)) if kv else (None, None)
@@ -1162,6 +1168,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     lpushnxjson = pushnxjson = pushnx_json = lpushnx_json
     rpushnxjson = rpushnx_json
+
+    popjson = lpopjson = lpop_json
+    rpopjson = rpop_json
 
     bpopjson = blpopjson = blpop_json
     brpopjson = brpop_json
