@@ -420,6 +420,16 @@ class TestRedisExtensionsCommands(object):
         r.zincrbywithstamps('a', 'x', -1)
         assert r.zrawscore('a', 'x') == 0
 
+    # Hash Section
+
+    def test_hincrbyex(self, r):
+        result = r.hincrbyex('a', 'x', amount=1, time=60)
+        assert result[0] == 1
+        assert result[1] is True
+        result = r.hincrbyex('a', 'x', amount=1, time=60)
+        assert result[0] == 2
+        assert result[1] is None
+
     # INT Section
 
     def test_get_int(self, r):

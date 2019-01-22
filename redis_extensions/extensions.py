@@ -502,6 +502,12 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.rawscore(self.zscore(name, value))
 
+    # Hash Section
+    def hincrbyex(self, name, key, amount=1, time=1800):
+        if self.exists(name):
+            return self.hincrby(name, key, amount=amount), None
+        return self.pipeline().hincrby(name, key, amount=amount).expire(name, time=time).execute()
+
     # INT Section
     def get_int(self, name, default=0):
         return int(self.get(name) or default)
