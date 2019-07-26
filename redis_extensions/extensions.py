@@ -299,7 +299,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         if isinstance(time, datetime.timedelta):
             time = time.seconds + time.days * 24 * 3600
-        return self.zadd(name, mod_time.time() + time, value)
+        return self.zadd(name, {value: mod_time.time() + time})
 
     def lrange_ex(self, name):
         cur_time = mod_time.time()
@@ -487,14 +487,16 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     def zaddwithstamps(self, name, *args, **kwargs):
         desc = 'desc' in kwargs and kwargs.pop('desc')
-        pieces = [item if index % 2 else self.__stampscore(item, desc) for index, item in enumerate(args)]
-        for pair in iteritems(kwargs):
-            pieces.append(self.__stampscore(pair[1], desc))
-            pieces.append(pair[0])
-        return self.zadd(name, *pieces)
+        mapping = kwargs.pop('mapping') if 'mapping' in kwargs else {}
+        for idx, item in enumerate(args):
+            if idx % 2:
+                mapping[item] = self.__stampscore(args[idx + 1], desc)
+        for k, v in kwargs.items():
+            mapping[k] = self.__stampscore(v, desc)
+        return self.zadd(name, mapping)
 
     def zincrbywithstamps(self, name, value, amount=1, desc=False):
-        return self.zadd(name, self.__stampscore(self.rawscore(self.zscore(name, value)) + amount, desc), value)
+        return self.zadd(name, {value: self.__stampscore(self.rawscore(self.zscore(name, value)) + amount, desc)})
 
     def zrawscore(self, name, value):
         """
@@ -1017,7 +1019,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         identifier = self.__uuid(short_uuid)
         item = json.dumps([identifier, queue, name, args])
         if delay > 0:
-            self.zadd(delayed, mod_time.time() + delay, item)
+            self.zadd(delayed, {item: mod_time.time() + delay})
         else:
             if enable_queue:
                 self.rpush(self.__queue_key(queue), item)

@@ -344,43 +344,43 @@ class TestRedisExtensionsCommands(object):
     # ZSorts(Sorted Sets) Section
 
     def test_zgt(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         result = r.zgt('a', 1)
         assert len(result) == 4
 
     def test_zge(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         result = r.zge('a', 1)
         assert len(result) == 6
 
     def test_zlt(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         result = r.zlt('a', 3)
         assert len(result) == 4
 
     def test_zle(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         result = r.zle('a', 3)
         assert len(result) == 6
 
     def test_zgtcount(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.zgtcount('a', 1) == 4
 
     def test_zgecount(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.zgecount('a', 1) == 6
 
     def test_zltcount(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.zltcount('a', 3) == 4
 
     def test_zlecount(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.zlecount('a', 3) == 6
 
     def test_zuniquerank(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.zuniquerank('a', 'x') == 0
         assert r.zuniquerank('a', 'xx') == 0
         assert r.zuniquerank('a', 'y') == 2
@@ -389,7 +389,7 @@ class TestRedisExtensionsCommands(object):
         assert r.zuniquerank('a', 'zz') == 4
 
     def test_zuniquerevrank(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.zuniquerevrank('a', 'x') == 4
         assert r.zuniquerevrank('a', 'xx') == 4
         assert r.zuniquerevrank('a', 'y') == 2
@@ -398,17 +398,17 @@ class TestRedisExtensionsCommands(object):
         assert r.zuniquerevrank('a', 'zz') == 0
 
     def test_zmax(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.zmax('a') == 'zz'
         assert r.zmax('a', withscores=True) == ('zz', 3.0)
 
     def test_zmin(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.zmin('a') == 'x'
         assert r.zmin('a', withscores=True) == ('x', 1.0)
 
     def test_ztopn(self, r):
-        r.zadd('a', x=1, y=2, z=3, xx=1, yy=2, zz=3)
+        r.zadd('a', {'x': 1, 'y': 2, 'z': 3, 'xx': 1, 'yy': 2, 'zz': 3})
         assert r.ztopn('a', 2) == ['zz', 'z']
         assert r.ztopn('a', 2, desc=False) == ['x', 'xx']
         assert r.zistopn('a', 'z', 2)
@@ -736,7 +736,7 @@ class TestRedisExtensionsCommands(object):
         r.geoadd('a', 0, 0, 'x')
         assert r.geopos('a', 'x')
         r.georem('a', 'x')
-        assert not r.geopos('a', 'x')
+        assert not r.geopos('a', 'x')[0]
 
     def test_geomembers(self, r):
         r.geoadd('a', 0, 0, 'x')
