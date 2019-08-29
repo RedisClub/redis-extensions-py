@@ -52,7 +52,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return tc.local_string(format=format)
 
     def __uuid(self, short_uuid=False):
-        return self.__str(shortuuid.uuid() if short_uuid else uuid.uuid4())
+        return shortuuid.uuid() if short_uuid else uuid.uuid4().hex
 
     # Keys Section(Delete Relative)
     def delete_keys(self, pattern='*', iter=False, count=None):
