@@ -15,6 +15,7 @@ import vcode as mod_vcode
 from CodeConvert import CodeConvert as cc
 from redis import StrictRedis
 from redis._compat import iteritems, xrange
+from redis.client import bool_ok
 from redis.exceptions import ResponseError, WatchError
 from redis_extensions.expires import BaseRedisExpires
 from TimeConvert import TimeConvert as tc
@@ -165,12 +166,19 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     # # Keys Section(Rename Relative)
     def quiet_rename(self, src, dst):
-        if self.exists(src):
-            try:
-                return self.rename(src, dst)
-            except ResponseError:
-                pass
-        return False
+        # if self.exists(src):
+        #     try:
+        #         return self.rename(src, dst)
+        #     except ResponseError:
+        #         pass
+        # return False
+        quiet_rename_script = """
+        if redis.call('exists', KEYS[1]) == 1 then
+            return redis.call('rename', KEYS[1], KEYS[2])
+        else
+            return ''
+        end"""
+        return bool_ok(self.eval(quiet_rename_script, 2, src, dst))
 
     # Strings Section
     def get_delete(self, name):
