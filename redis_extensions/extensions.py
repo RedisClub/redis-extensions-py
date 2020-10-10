@@ -1044,7 +1044,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             logger.error(e)
             return None
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_queue=False):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_queue=False, release_lock_when_error=True):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
@@ -1077,6 +1077,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                     callbacks[queue](name, args)
                 except Exception as e:
                     logger.error(e)
+                    if release_lock_when_error:
+                        self.release_lock(identifier, locked)
                     continue
 
             if self.zrem(delayed, item):
