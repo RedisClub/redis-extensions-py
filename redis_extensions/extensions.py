@@ -1051,7 +1051,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         logger.info('  * Release lock: {0}'.format(identifier))
         return self.delete_lock(identifier)
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_queue=False, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_auto_zrem=False, enable_queue=False, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
@@ -1085,19 +1085,23 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                     unlocked_warning_func(queue, name, args)
                 continue
 
+            # At most once 最多消费一次
+            if enable_auto_zrem and self.zrem(delayed, item) and enable_queue:
+                self.rpush(self.__queue_key(queue), item)
+
             # Callbacks
             if queue in callbacks:
                 try:
                     callbacks[queue](name, args)
                 except Exception as e:
                     logger.error(e)
-                    if release_lock_when_error:
-                        self.release_lock(identifier, locked)
-                    continue
+                    if not release_lock_when_error:
+                        continue
+                    self.release_lock(identifier, locked)
 
-            if self.zrem(delayed, item):
-                if enable_queue:
-                    self.rpush(self.__queue_key(queue), item)
+            # At least once 最少消费一次
+            if not enable_auto_zrem and self.zrem(delayed, item) and enable_queue:
+                self.rpush(self.__queue_key(queue), item)
 
             self.release_lock(identifier, locked)
 
