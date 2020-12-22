@@ -1030,6 +1030,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return '{0}queue:{1}'.format(KEY_PREFIX, queue)
 
     def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0, short_uuid=False, enable_queue=False):
+        """
+        Producer of delay execute.
+        """
         identifier = self.__uuid(short_uuid)
         item = json.dumps([identifier, queue, name, args])
         if delay > 0:
@@ -1062,6 +1065,23 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.delete_lock(identifier)
 
     def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_auto_zrem=False, enable_queue=False, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True):
+        """
+        Consumer of delay execute.
+
+        ``unlocked_warning_func`` indicates callback function when ``acquire_lock`` fail.
+
+        ``enable_auto_zrem`` indicates whether enable auto zrem or not. ``True`` for at most once, ``False`` for at least once.
+
+        ``enable_queue`` indicates whether enable queue or not.
+
+        ``release_lock_when_launch`` indicates whether release lock when launch or not. This is for ``restart``.
+
+        ``release_lock_key`` indicates acquire lock key when ``release_lock_when_launch``.
+
+        ``release_lock_key_expire`` indicates expire time of ``release_lock_key``.
+
+        ``release_lock_when_error`` indicates whether release lock when error or not.
+        """
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
@@ -1090,7 +1110,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
             locked = self.acquire_lock(identifier)
             if not locked:
-                # Call ``unlocked_warning_func`` if exists when ``acquire_lock`` fails
+                # Call ``unlocked_warning_func`` if exists when ``acquire_lock`` fail
                 if unlocked_warning_func:
                     unlocked_warning_func(queue, name, args)
                 continue
