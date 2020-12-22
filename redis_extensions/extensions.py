@@ -704,7 +704,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 pass
         return False
 
-    def lock_exists(self, name, regex=False):
+    def delete_lock(self, name):
+        """
+        Delete lock for ``name``.
+        """
+        return self.delete(self.__lock_key(name))
+
+    def exists_lock(self, name, regex=False):
         """
         Check lock for ``name`` exists or not.
         """
@@ -1044,13 +1050,28 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             logger.error(e)
             return None
 
+    def release_poll_queue_lock(self, delayed):
+        if not delayed:
+            return
+        item = self.zrange(delayed, 0, 0, withscores=True)
+        if not item:
+            return
+        item = item[0][0]
+        identifier, queue, name, args = json.loads(item)
+        logger.info('  * Release lock: {0}'.format(identifier))
+        return self.delete_lock(identifier)
+
     def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_queue=False, release_lock_when_error=True):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
-        logger.info('Available callbacks ({0}):'.format(len(callbacks)))
+        logger.info('>>> Available callbacks ({0}):'.format(len(callbacks)))
         for k, v in iteritems(callbacks):
-            logger.info('* {0}: {1}'.format(k, v))
+            logger.info('  * {0}: {1}'.format(k, v))
+
+        logger.info('>>> Release pool queue lock start')
+        self.release_poll_queue_lock(delayed)
+        logger.info('>>> Release pool queue lock end')
 
         while True:
             item = self.zrange(delayed, 0, 0, withscores=True)
@@ -1197,6 +1218,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     zgte = zge
     zlte = zle
     vcode_status = vcode_exists
+    lock_exists = exists_lock
 
     # Delete => Del
     delkeys = del_keys = delete_keys
