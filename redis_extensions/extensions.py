@@ -1061,7 +1061,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         logger.info('  * Release lock: {0}'.format(identifier))
         return self.delete_lock(identifier)
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_queue=False, release_lock_when_error=True):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_queue=False, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
@@ -1069,9 +1069,12 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         for k, v in iteritems(callbacks):
             logger.info('  * {0}: {1}'.format(k, v))
 
-        logger.info('>>> Release pool queue lock start')
-        self.release_poll_queue_lock(delayed)
-        logger.info('>>> Release pool queue lock end')
+        if release_lock_when_launch:
+            locked = self.acquire_lock(release_lock_key or delayed, time=release_lock_key_expire)
+            if locked:
+                logger.info('>>> Release pool queue lock start')
+                self.release_poll_queue_lock(delayed)
+                logger.info('>>> Release pool queue lock end')
 
         while True:
             item = self.zrange(delayed, 0, 0, withscores=True)
