@@ -6,6 +6,7 @@ import json
 import logging
 import random
 import re
+import signal
 import time as mod_time
 import uuid
 
@@ -30,6 +31,20 @@ logger.setLevel(logging.INFO)
 
 KEY_PREFIX = 'r:'  # Prefix of redis-extensions used key
 WARNING_LOG = '``{0}`` used, may be very very very slow when keys\' amount very large'  # ``r.keys()`` and ``r.scan_iter()`` not support use
+
+
+POLL_QUEUE_CONTINUE_FLAG = True
+
+
+# Signal Handler
+def sigintHandler(signum, frame):
+    global POLL_QUEUE_CONTINUE_FLAG
+    POLL_QUEUE_CONTINUE_FLAG = False
+
+
+# signal.SIGKILL, `KILL -9`, unblockable
+for signum in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM, signal.SIGTSTP]:
+    signal.signal(signum, sigintHandler)
 
 
 class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
@@ -1064,7 +1079,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         final_logger.info('  * Release lock: {0}'.format(identifier))
         return self.delete_lock(identifier)
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_auto_zrem=False, enable_queue=False, process_lock_key=None, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True, delayed_logger=None):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', enable_auto_zrem=False, enable_queue=False, process_lock_key=None, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True, delayed_logger=None, unlocked_warning_func=None):
         """
         Consumer of delay execute.
 
@@ -1106,7 +1121,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 final_logger.info('>>> Release item lock end')
 
         process_lock = None
-        while True:
+        while POLL_QUEUE_CONTINUE_FLAG:
             # Release process lock
             if process_lock:
                 self.release_lock(final_process_lock_key, process_lock)
