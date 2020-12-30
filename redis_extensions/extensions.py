@@ -1054,7 +1054,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         logger.info('  * Release lock: {0}'.format(identifier))
         return self.delete_lock(identifier)
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_auto_zrem=False, enable_queue=False, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_auto_zrem=False, enable_queue=False, process_lock_key=None, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True):
         """
         Consumer of delay execute.
 
@@ -1063,6 +1063,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         ``enable_auto_zrem`` indicates whether enable auto zrem or not. ``True`` for at most once, ``False`` for at least once.
 
         ``enable_queue`` indicates whether enable queue or not.
+
+        ``process_lock_key`` indicates acquire process lock key.
 
         ``release_lock_when_launch`` indicates whether release lock when launch or not. This is for ``restart``.
 
@@ -1075,18 +1077,34 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
+        final_release_lock_key = release_lock_key or delayed
+        final_process_lock_key = process_lock_key or delayed
+
         logger.info('>>> Available callbacks ({0}):'.format(len(callbacks)))
         for k, v in iteritems(callbacks):
             logger.info('  * {0}: {1}'.format(k, v))
 
         if release_lock_when_launch:
-            locked = self.acquire_lock(release_lock_key or delayed, time=release_lock_key_expire)
-            if locked:
-                logger.info('>>> Release pool queue lock start')
+            release_lock = self.acquire_lock(final_release_lock_key, time=release_lock_key_expire)
+            if release_lock:
+                logger.info('>>> Release process lock start')
+                self.delete_lock(process_lock_key or delayed)
+                logger.info('>>> Release process lock end')
+                logger.info('>>> Release item lock start')
                 self.release_poll_queue_lock(delayed)
-                logger.info('>>> Release pool queue lock end')
+                logger.info('>>> Release item lock end')
 
+        process_lock = None
         while True:
+            # Release process lock
+            if process_lock:
+                self.release_lock(final_process_lock_key, process_lock)
+
+            # Acquire process lock
+            process_lock = self.acquire_lock(final_process_lock_key)
+            if not process_lock:
+                continue
+
             item = self.zrange(delayed, 0, 0, withscores=True)
 
             if not item or item[0][1] > mod_time.time():
@@ -1098,8 +1116,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             item = item[0][0]
             identifier, queue, name, args = json.loads(item)
 
-            locked = self.acquire_lock(identifier)
-            if not locked:
+            item_lock = self.acquire_lock(identifier)
+            if not item_lock:
                 # Call ``unlocked_warning_func`` if exists when ``acquire_lock`` fail
                 if unlocked_warning_func:
                     unlocked_warning_func(queue, name, args)
@@ -1117,13 +1135,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                     logger.error(e)
                     if not release_lock_when_error:
                         continue
-                    self.release_lock(identifier, locked)
+                    self.release_lock(identifier, item_lock)
 
             # At least once 最少消费一次
             if not enable_auto_zrem and self.zrem(delayed, item) and enable_queue:
                 self.rpush(self.__queue_key(queue), item)
 
-            self.release_lock(identifier, locked)
+            self.release_lock(identifier, item_lock)
 
     # HotKey Section
     def hotkey(self, gfunc=None, gargs=None, gkwargs=None, sfunc=None, sargs=None, skwargs=None, update_timeout=1000, short_uuid=False):
