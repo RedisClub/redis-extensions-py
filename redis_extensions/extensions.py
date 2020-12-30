@@ -1053,7 +1053,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             logger.error(e)
             return None
 
-    def release_poll_queue_lock(self, delayed):
+    def release_poll_queue_lock(self, delayed, final_logger=None):
         if not delayed:
             return
         item = self.zrange(delayed, 0, 0, withscores=True)
@@ -1061,10 +1061,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return
         item = item[0][0]
         identifier, queue, name, args = json.loads(item)
-        logger.info('  * Release lock: {0}'.format(identifier))
+        final_logger.info('  * Release lock: {0}'.format(identifier))
         return self.delete_lock(identifier)
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_auto_zrem=False, enable_queue=False, process_lock_key=None, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', unlocked_warning_func=None, enable_auto_zrem=False, enable_queue=False, process_lock_key=None, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True, delayed_logger=None):
         """
         Consumer of delay execute.
 
@@ -1089,20 +1089,21 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         final_release_lock_key = release_lock_key or delayed
         final_process_lock_key = process_lock_key or delayed
+        final_logger = delayed_logger or logger
 
-        logger.info('>>> Available callbacks ({0}):'.format(len(callbacks)))
+        final_logger.info('>>> Available callbacks ({0}):'.format(len(callbacks)))
         for k, v in iteritems(callbacks):
-            logger.info('  * {0}: {1}'.format(k, v))
+            final_logger.info('  * {0}: {1}'.format(k, v))
 
         if release_lock_when_launch:
             release_lock = self.acquire_lock(final_release_lock_key, time=release_lock_key_expire)
             if release_lock:
-                logger.info('>>> Release process lock start')
+                final_logger.info('>>> Release process lock start')
                 self.delete_lock(process_lock_key or delayed)
-                logger.info('>>> Release process lock end')
-                logger.info('>>> Release item lock start')
-                self.release_poll_queue_lock(delayed)
-                logger.info('>>> Release item lock end')
+                final_logger.info('>>> Release process lock end')
+                final_logger.info('>>> Release item lock start')
+                self.release_poll_queue_lock(delayed, final_logger=final_logger)
+                final_logger.info('>>> Release item lock end')
 
         process_lock = None
         while True:
@@ -1121,7 +1122,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 mod_time.sleep(.01)
                 continue
 
-            logger.info(item)
+            final_logger.info(item)
 
             item = item[0][0]
             identifier, queue, name, args = json.loads(item)
@@ -1142,7 +1143,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 try:
                     callbacks[queue](name, args)
                 except Exception as e:
-                    logger.error(e)
+                    final_logger.error(e)
                     if not release_lock_when_error:
                         continue
                     self.release_lock(identifier, item_lock)
