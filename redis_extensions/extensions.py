@@ -7,6 +7,7 @@ import logging
 import random
 import re
 import signal
+import socket
 import time as mod_time
 import uuid
 
@@ -18,10 +19,10 @@ from redis import StrictRedis
 from redis._compat import iteritems, xrange
 from redis.client import bool_ok
 from redis.exceptions import ResponseError, WatchError
-from redis_extensions.expires import BaseRedisExpires
 from TimeConvert import TimeConvert as tc
 
 from .compat import basestring, bytes
+from .expires import BaseRedisExpires
 
 
 logger = logging.getLogger('redis_extensions')
@@ -45,6 +46,19 @@ def sigintHandler(signum, frame):
 # signal.SIGKILL, `KILL -9`, unblockable
 for signum in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM, signal.SIGTSTP]:
     signal.signal(signum, sigintHandler)
+
+
+# Get the local ip
+def get_network_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        s.connect(('<broadcast>', 0))
+        ip = s.getsockname()[0]
+        s.close()
+    except OSError:
+        ip = '127.0.0.1'
+    return ip
 
 
 class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
@@ -1079,7 +1093,24 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         final_logger.info('  * Release lock: {0}'.format(identifier))
         return self.delete_lock(identifier)
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', enable_auto_zrem=False, enable_queue=False, enable_process_lock=False, process_lock_key=None, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True, delayed_logger=None, unlocked_warning_func=None):
+    def __release_lock_when_launch(self, release_lock_when_launch, release_lock_eth0_inet_addr, final_process_lock_key, delayed, final_logger):
+        if not release_lock_when_launch:
+            return
+        if not release_lock_eth0_inet_addr:
+            final_logger.info('>>> Release lock should pass `release_lock_eth0_inet_addr`')
+            return
+        eth0_inet_addr = get_network_ip()
+        if eth0_inet_addr not in release_lock_eth0_inet_addr:
+            final_logger.info('>>> Release lock `release_lock_eth0_inet_addr` not match')
+            return
+        final_logger.info('>>> Release process lock start')
+        self.delete_lock(final_process_lock_key)
+        final_logger.info('>>> Release process lock end')
+        final_logger.info('>>> Release item lock start')
+        self.release_poll_queue_lock(delayed, final_logger=final_logger)
+        final_logger.info('>>> Release item lock end')
+
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', enable_auto_zrem=False, enable_queue=False, enable_process_lock=False, process_lock_key=None, release_lock_when_launch=True, release_lock_eth0_inet_addr=None, release_lock_when_error=True, delayed_logger=None, unlocked_warning_func=None):
         """
         Consumer of delay execute.
 
@@ -1095,6 +1126,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``release_lock_when_launch`` indicates whether release lock when launch or not. This is for ``restart``.
 
+        ``release_lock_eth0_inet_addr`` indicates eth0 inet addr, which can release lock when ``release_lock_when_launch``.
+
         ``release_lock_key`` indicates acquire lock key when ``release_lock_when_launch``.
 
         ``release_lock_key_expire`` indicates expire time of ``release_lock_key``.
@@ -1104,7 +1137,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
-        final_release_lock_key = 'release:lock:{0}'.format(release_lock_key or delayed)
         final_process_lock_key = 'process:lock:{0}'.format(process_lock_key or delayed)
         final_logger = delayed_logger or logger
 
@@ -1112,19 +1144,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         for k, v in iteritems(callbacks):
             final_logger.info('  * {0}: {1}'.format(k, v))
 
-        # TODO:
-        #  Stronger release lock when launch
-        #  Only one machine exec release lock
-        #  Other machines loop until release lock finished
-        if release_lock_when_launch:
-            release_lock = self.acquire_lock(final_release_lock_key, time=release_lock_key_expire)
-            if release_lock:
-                final_logger.info('>>> Release process lock start')
-                self.delete_lock(process_lock_key or delayed)
-                final_logger.info('>>> Release process lock end')
-                final_logger.info('>>> Release item lock start')
-                self.release_poll_queue_lock(delayed, final_logger=final_logger)
-                final_logger.info('>>> Release item lock end')
+        self.__release_lock_when_launch(release_lock_when_launch, release_lock_eth0_inet_addr, final_process_lock_key, delayed, final_logger)
 
         process_lock = None
         while POLL_QUEUE_CONTINUE_FLAG:
@@ -1157,8 +1177,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 continue
 
             # At most once 最多消费一次
-            if enable_auto_zrem and self.zrem(delayed, item) and enable_queue:
-                self.rpush(self.__queue_key(queue), item)
+            if enable_auto_zrem and self.zrem(delayed, item):
+                if enable_queue:
+                    self.rpush(self.__queue_key(queue), item)
+                self.release_lock(identifier, item_lock)
 
             # Callbacks
             if queue in callbacks:
@@ -1168,11 +1190,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                     final_logger.error(e)
                     if not release_lock_when_error:
                         continue
-                    self.release_lock(identifier, item_lock)
 
             # At least once 最少消费一次
-            if not enable_auto_zrem and self.zrem(delayed, item) and enable_queue:
-                self.rpush(self.__queue_key(queue), item)
+            if not enable_auto_zrem and self.zrem(delayed, item):
+                if enable_queue:
+                    self.rpush(self.__queue_key(queue), item)
 
             self.release_lock(identifier, item_lock)
 
