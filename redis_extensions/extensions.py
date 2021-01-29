@@ -1102,6 +1102,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         for k, v in iteritems(callbacks):
             final_logger.info('  * {0}: {1}'.format(k, v))
 
+        # TODO:
+        #  Stronger release lock when launch
+        #  Only one machine exec release lock
+        #  Other machines loop until release lock finished
         if release_lock_when_launch:
             release_lock = self.acquire_lock(final_release_lock_key, time=release_lock_key_expire)
             if release_lock:
