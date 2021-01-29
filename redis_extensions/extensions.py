@@ -1069,7 +1069,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         final_logger.info('  * Release lock: {0}'.format(identifier))
         return self.delete_lock(identifier)
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', enable_auto_zrem=False, enable_queue=False, process_lock_key=None, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True, delayed_logger=None, unlocked_warning_func=None):
+    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', enable_auto_zrem=False, enable_queue=False, enable_process_lock=False, process_lock_key=None, release_lock_when_launch=True, release_lock_key=None, release_lock_key_expire=1800, release_lock_when_error=True, delayed_logger=None, unlocked_warning_func=None):
         """
         Consumer of delay execute.
 
@@ -1078,6 +1078,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         ``enable_auto_zrem`` indicates whether enable auto zrem or not. ``True`` for at most once, ``False`` for at least once.
 
         ``enable_queue`` indicates whether enable queue or not.
+
+        ``enable_process_lock`` indicates whether enable process lock or not.
 
         ``process_lock_key`` indicates acquire process lock key.
 
@@ -1092,8 +1094,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
         callbacks = {k: v for k, v in iteritems(callbacks) if v}
 
-        final_release_lock_key = release_lock_key or delayed
-        final_process_lock_key = process_lock_key or delayed
+        final_release_lock_key = 'release:lock:{0}'.format(release_lock_key or delayed)
+        final_process_lock_key = 'process:lock:{0}'.format(process_lock_key or delayed)
         final_logger = delayed_logger or logger
 
         final_logger.info('>>> Available callbacks ({0}):'.format(len(callbacks)))
@@ -1112,14 +1114,15 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         process_lock = None
         while POLL_QUEUE_CONTINUE_FLAG:
-            # Release process lock
-            if process_lock:
-                self.release_lock(final_process_lock_key, process_lock)
+            if enable_process_lock:
+                # Release process lock
+                if process_lock:
+                    self.release_lock(final_process_lock_key, process_lock)
 
-            # Acquire process lock
-            process_lock = self.acquire_lock(final_process_lock_key)
-            if not process_lock:
-                continue
+                # Acquire process lock
+                process_lock = self.acquire_lock(final_process_lock_key)
+                if not process_lock:
+                    continue
 
             item = self.zrange(delayed, 0, 0, withscores=True)
 
