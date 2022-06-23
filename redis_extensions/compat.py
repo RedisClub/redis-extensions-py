@@ -31,9 +31,19 @@ if is_py2:
     basestring = basestring
     numeric_types = (int, long, float)
 
+    def iteritems(x):
+        return x.iteritems()
+
+    xrange = xrange
+
 elif is_py3:
     builtin_str = str
     str = str
     bytes = bytes
     basestring = (str, bytes)
     numeric_types = (int, float)
+
+    def iteritems(x):
+        return iter(x.items())
+
+    xrange = range

@@ -16,12 +16,11 @@ import shortuuid
 import vcode as mod_vcode
 from CodeConvert import CodeConvert as cc
 from redis import StrictRedis
-from redis._compat import iteritems, xrange
 from redis.client import bool_ok
 from redis.exceptions import ResponseError, WatchError
 from TimeConvert import TimeConvert as tc
 
-from .compat import basestring, bytes
+from .compat import basestring, bytes, iteritems, xrange
 from .expires import BaseRedisExpires
 
 

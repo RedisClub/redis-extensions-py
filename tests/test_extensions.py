@@ -734,11 +734,11 @@ class TestRedisExtensionsCommands(object):
     # For rename official function
 
     def test_georem(self, r):
-        r.geoadd('a', 0, 0, 'x')
+        r.geoadd('a', [0, 0, 'x'])
         assert r.geopos('a', 'x')
         r.georem('a', 'x')
         assert r.geopos('a', 'x') == [None]
 
     def test_geomembers(self, r):
-        r.geoadd('a', 0, 0, 'x')
+        r.geoadd('a', [0, 0, 'x'])
         assert r.geomembers('a') == ['x']
