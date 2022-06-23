@@ -310,7 +310,7 @@ class TestRedisExtensionsCommands(object):
 
         # func = lambda x: json.loads(x).get('a', 0)
         def func(x):
-            json.loads(x).get('a', 0)
+            return json.loads(x).get('a', 0)
 
         assert r.sorted_pop('b', 1, sorted_func=func, reverse=False) == item2
 
