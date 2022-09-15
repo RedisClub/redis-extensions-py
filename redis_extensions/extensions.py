@@ -20,7 +20,6 @@ from redis.client import bool_ok
 from redis.exceptions import ResponseError, WatchError
 from TimeConvert import TimeConvert as tc
 
-from .compat import basestring, bytes, iteritems, xrange
 from .expires import BaseRedisExpires
 
 
@@ -77,7 +76,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def __str(self, x):
         if isinstance(x, int):
             return str(x)
-        return x if isinstance(x, basestring) else bytes(x)
+        return x if isinstance(x, (str, bytes)) else bytes(x)
 
     def __local_ymd(self, format='%Y-%m-%d'):
         return tc.local_string(format=format)
@@ -370,7 +369,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         Remove and return multi random member of set ``name``.
         """
         p = self.pipeline()
-        for _ in xrange(num):
+        for _ in range(num):
             p.spop(name)
         eles = p.execute()
         return eles, sum(x is not None for x in eles)
@@ -565,7 +564,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     def hgetall_int(self, name, default=0):
         kvs = self.hgetall(name)
-        return {k: int(v or default) for (k, v) in iteritems(kvs)}
+        return {k: int(v or default) for (k, v) in kvs.items()}
 
     # FLOAT Section
     def get_float(self, name, default=0):
@@ -584,7 +583,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     def hgetall_float(self, name, default=0):
         kvs = self.hgetall(name)
-        return {k: float(v or default) for (k, v) in iteritems(kvs)}
+        return {k: float(v or default) for (k, v) in kvs.items()}
 
     # STR Section
     def get_str(self, name, default=''):
@@ -603,7 +602,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     def hgetall_str(self, name, default=''):
         kvs = self.hgetall(name)
-        return {k: (v or default) for (k, v) in iteritems(kvs)}
+        return {k: (v or default) for (k, v) in kvs.items()}
 
     # JSON Section
     def __json_params(self, cls=None, json_params=None):
@@ -652,7 +651,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.hsetnx(name, key, json.dumps(value, **self.__json_params(cls, json_params)))
 
     def hmset_json(self, name, mapping, cls=None, json_params=None):
-        mapping = {k: json.dumps(v, **self.__json_params(cls, json_params)) for (k, v) in iteritems(mapping)}
+        mapping = {k: json.dumps(v, **self.__json_params(cls, json_params)) for (k, v) in mapping.items()}
         return self.hmset(name, mapping)
 
     def hget_json(self, name, key, default='{}'):
@@ -668,7 +667,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     def hgetall_json(self, name, default='{}'):
         kvs = self.hgetall(name)
-        return {k: json.loads(v or default) for (k, v) in iteritems(kvs)}
+        return {k: json.loads(v or default) for (k, v) in kvs.items()}
 
     def lpush_json(self, name, value, cls=None, json_params=None):
         return self.lpush(name, json.dumps(value, **self.__json_params(cls, json_params)))
@@ -1024,7 +1023,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def gvcode_add(self, num=10):
         if num <= 0:
             raise ValueError('The num argument should be positive')
-        gvcodes = (self.__gvcode_str() for _ in xrange(num))
+        gvcodes = (self.__gvcode_str() for _ in range(num))
         return self.sadd(self._gvcode_key(), *gvcodes)
 
     def gvcode_initial(self, num=10):
@@ -1143,14 +1142,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``release_lock_when_error`` indicates whether release lock when error or not.
         """
-        callbacks = {k: self.__callable_func(v) for k, v in iteritems(callbacks)}
-        callbacks = {k: v for k, v in iteritems(callbacks) if v}
+        callbacks = {k: self.__callable_func(v) for k, v in callbacks.items()}
+        callbacks = {k: v for k, v in callbacks.items() if v}
 
         final_process_lock_key = 'process:lock:{0}'.format(process_lock_key or delayed)
         final_logger = delayed_logger or logger
 
         final_logger.info('>>> Available callbacks ({0}):'.format(len(callbacks)))
-        for k, v in iteritems(callbacks):
+        for k, v in callbacks.items():
             final_logger.info('  * {0}: {1}'.format(k, v))
 
         self.__release_lock_when_launch(release_lock_when_launch, release_lock_eth0_inet_addr, final_process_lock_key, delayed, final_logger)
