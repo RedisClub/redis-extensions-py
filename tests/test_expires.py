@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from redis_extensions import RedisExpires as exp
 
 

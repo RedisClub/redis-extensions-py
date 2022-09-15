@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import redis
 from redis import *
 

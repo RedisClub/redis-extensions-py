@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 class BaseRedisExpires(object):
 
     def __init__(self, *args, **kwargs):
