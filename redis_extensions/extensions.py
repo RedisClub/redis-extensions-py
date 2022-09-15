@@ -606,7 +606,15 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return {k: (v or default) for (k, v) in iteritems(kvs)}
 
     # JSON Section
-    def set_json(self, name, value, ex=None, px=None, nx=False, xx=False, cls=None):
+    def __json_params(self, cls=None, json_params=None):
+        # TODO: Change to merge dict by {**a, **b} when drop support Python2.x
+        # cls for backwards compatibility
+        # return {**{'cls': cls}, **(json_params or {})}
+        json_params = json_params or {}
+        json_params['cls'] = cls
+        return json_params
+
+    def set_json(self, name, value, ex=None, px=None, nx=False, xx=False, cls=None, json_params=None):
         """
         Set the value at key ``name`` to ``json dumps value``.
 
@@ -618,33 +626,33 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``xx`` if set to True, set the value at key ``name`` to ``value`` if it already exists.
         """
-        return self.set(name, json.dumps(value, cls=cls), ex=ex, px=px, nx=nx, xx=xx)
+        return self.set(name, json.dumps(value, **self.__json_params(cls, json_params)), ex=ex, px=px, nx=nx, xx=xx)
 
-    def setex_json(self, name, time, value, cls=None):
+    def setex_json(self, name, time, value, cls=None, json_params=None):
         """
         Set the value of key ``name`` to ``json dumps value`` that expires in ``time`` seconds.
 
         ``time`` can be represented by an integer or a Python timedelta object.
         """
-        return self.setex(name, time, json.dumps(value, cls=cls))
+        return self.setex(name, time, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def setnx_json(self, name, value, cls=None):
+    def setnx_json(self, name, value, cls=None, json_params=None):
         """
         Set the value of key ``name`` to ``json dumps value`` if key doesn't exist.
         """
-        return self.setnx(name, json.dumps(value, cls=cls))
+        return self.setnx(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
     def get_json(self, name, default='{}'):
         return json.loads(self.get(name) or default)
 
-    def hset_json(self, name, key, value, cls=None):
-        return self.hset(name, key, json.dumps(value, cls=cls))
+    def hset_json(self, name, key, value, cls=None, json_params=None):
+        return self.hset(name, key, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def hsetnx_json(self, name, key, value, cls=None):
-        return self.hsetnx(name, key, json.dumps(value, cls=cls))
+    def hsetnx_json(self, name, key, value, cls=None, json_params=None):
+        return self.hsetnx(name, key, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def hmset_json(self, name, mapping, cls=None):
-        mapping = {k: json.dumps(v, cls=cls) for (k, v) in iteritems(mapping)}
+    def hmset_json(self, name, mapping, cls=None, json_params=None):
+        mapping = {k: json.dumps(v, **self.__json_params(cls, json_params)) for (k, v) in iteritems(mapping)}
         return self.hmset(name, mapping)
 
     def hget_json(self, name, key, default='{}'):
@@ -662,23 +670,23 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         kvs = self.hgetall(name)
         return {k: json.loads(v or default) for (k, v) in iteritems(kvs)}
 
-    def lpush_json(self, name, value, cls=None):
-        return self.lpush(name, json.dumps(value, cls=cls))
+    def lpush_json(self, name, value, cls=None, json_params=None):
+        return self.lpush(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def rpush_json(self, name, value, cls=None):
-        return self.rpush(name, json.dumps(value, cls=cls))
+    def rpush_json(self, name, value, cls=None, json_params=None):
+        return self.rpush(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def lpushx_json(self, name, value, cls=None):
-        return self.lpushx(name, json.dumps(value, cls=cls))
+    def lpushx_json(self, name, value, cls=None, json_params=None):
+        return self.lpushx(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def rpushx_json(self, name, value, cls=None):
-        return self.rpushx(name, json.dumps(value, cls=cls))
+    def rpushx_json(self, name, value, cls=None, json_params=None):
+        return self.rpushx(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def lpushnx_json(self, name, value, cls=None, force=True):
-        return self.lpushnx(name, json.dumps(value, cls=cls), force=force)
+    def lpushnx_json(self, name, value, cls=None, force=True, json_params=None):
+        return self.lpushnx(name, json.dumps(value, **self.__json_params(cls, json_params)), force=force)
 
-    def rpushnx_json(self, name, value, cls=None, force=True):
-        return self.rpushnx(name, json.dumps(value, cls=cls), force=force)
+    def rpushnx_json(self, name, value, cls=None, force=True, json_params=None):
+        return self.rpushnx(name, json.dumps(value, **self.__json_params(cls, json_params)), force=force)
 
     def lpop_json(self, name, default='{}'):
         return json.loads(self.lpop(name) or default)
@@ -686,13 +694,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def rpop_json(self, name, default='{}'):
         return json.loads(self.rpop(name) or default)
 
-    def blpop_json(self, keys, timeout=0, cls=None):
+    def blpop_json(self, keys, timeout=0, cls=None, json_params=None):
         kv = self.blpop(keys, timeout=timeout)
-        return (kv[0], json.loads(kv[1], cls=cls)) if kv else (None, None)
+        return (kv[0], json.loads(kv[1], **self.__json_params(cls, json_params))) if kv else (None, None)
 
-    def brpop_json(self, keys, timeout=0, cls=None):
+    def brpop_json(self, keys, timeout=0, cls=None, json_params=None):
         kv = self.brpop(keys, timeout=timeout)
-        return (kv[0], json.loads(kv[1], cls=cls)) if kv else (None, None)
+        return (kv[0], json.loads(kv[1], **self.__json_params(cls, json_params))) if kv else (None, None)
 
     # Locks Section
     def __lock_key(self, name):

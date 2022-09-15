@@ -5,6 +5,8 @@ import time
 
 import pytest
 
+from redis_extensions.compat import is_py2, is_py3
+
 
 class TestRedisExtensionsCommands(object):
 
@@ -481,6 +483,11 @@ class TestRedisExtensionsCommands(object):
     def test_set_json(self, r):
         r.set_json('a', {'a': 1})
         assert r.get('a') == '{"a": 1}'
+        r.set_json('a', {'a': u'测试'}, json_params={'ensure_ascii': False})
+        if is_py2:
+            assert r.get('a') == u'{"a": "测试"}'
+        elif is_py3:
+            assert r.get('a') == '{"a": "测试"}'
 
     def test_get_json(self, r):
         j = {'a': 1}
@@ -734,11 +741,17 @@ class TestRedisExtensionsCommands(object):
     # For rename official function
 
     def test_georem(self, r):
-        r.geoadd('a', [0, 0, 'x'])
+        if is_py2:
+            r.geoadd('a', 0, 0, 'x')
+        elif is_py3:
+            r.geoadd('a', [0, 0, 'x'])
         assert r.geopos('a', 'x')
         r.georem('a', 'x')
         assert r.geopos('a', 'x') == [None]
 
     def test_geomembers(self, r):
-        r.geoadd('a', [0, 0, 'x'])
+        if is_py2:
+            r.geoadd('a', 0, 0, 'x')
+        elif is_py3:
+            r.geoadd('a', [0, 0, 'x'])
         assert r.geomembers('a') == ['x']
