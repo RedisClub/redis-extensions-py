@@ -8,7 +8,8 @@ import signal
 import socket
 import time as mod_time
 import uuid
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
+import warnings
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import gvcode
 import shortuuid
@@ -16,7 +17,7 @@ import vcode as mod_vcode
 from CodeConvert import CodeConvert as cc
 from redis import StrictRedis
 from redis.client import bool_ok
-from redis.exceptions import ResponseError, WatchError
+from redis.exceptions import DataError, ResponseError, WatchError
 from redis.typing import AnyKeyT, EncodableT, ExpiryT, FieldT, KeyT, ZScoreBoundT
 from TimeConvert import TimeConvert as tc
 
@@ -652,13 +653,27 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def get_json(self, name: str, default: str = '{}') -> Dict[str, Any]:
         return json.loads(self.get(name) or default)
 
-    def hset_json(self, name: str, key: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseIntT:
-        return self.hset(name, key, json.dumps(value, **self.__json_params(cls, json_params)))
+    def hset_json(self, name: str, key: Optional[str] = None, value: Optional[EncodableT] = None, mapping: Optional[dict] = None, items: Optional[list] = None, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseIntT:
+        if key is None and not mapping and not items:
+            raise DataError("'hsetjson' with no key value pairs")
+        if key is not None:
+            value = json.dumps(value, **self.__json_params(cls, json_params))
+        if mapping:
+            mapping = {k: json.dumps(v, **self.__json_params(cls, json_params)) for (k, v) in mapping.items()}
+        if items:
+            items = [(json.dumps(item, **self.__json_params(cls, json_params)) if idx % 2 else item) for idx, item in enumerate(items)]
+        return self.hset(name, key=key, value=value, mapping=mapping, items=items)
 
     def hsetnx_json(self, name: str, key: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseBoolT:
         return self.hsetnx(name, key, json.dumps(value, **self.__json_params(cls, json_params)))
 
     def hmset_json(self, name: str, mapping: Dict[str, Any], cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseStrT:
+        warnings.warn(
+            f"{self.__class__.__name__}.hmsetjson() is deprecated. "
+            f"Use {self.__class__.__name__}.hsetjson() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         mapping = {k: json.dumps(v, **self.__json_params(cls, json_params)) for (k, v) in mapping.items()}
         return self.hmset(name, mapping)
 

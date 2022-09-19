@@ -505,6 +505,10 @@ class TestRedisExtensionsCommands(object):
     def test_hset_json(self, r):
         r.hset_json('a', 'a', {'a': 1})
         assert r.hget('a', 'a') == '{"a": 1}'
+        r.hset_json('a', mapping={'b': {'b': 2}})
+        assert r.hget('a', 'b') == '{"b": 2}'
+        r.hset_json('a', items=['c', {'c': 3}])
+        assert r.hget('a', 'c') == '{"c": 3}'
 
     def test_hget_json(self, r):
         j = {'a': 1}
