@@ -301,6 +301,7 @@ class TestRedisExtensionsCommands(object):
     def test_sorted_pop(self, r):
         r.rpush('a', *range(10))
         assert r.sorted_pop('a', 3) == '6'
+        assert r.sorted_pop('a', 9) is None
 
         item1 = json.dumps({'a': 1, 'b': 'a'})
         item2 = json.dumps({'a': 2, 'b': 'b'})
@@ -312,8 +313,8 @@ class TestRedisExtensionsCommands(object):
 
         assert r.sorted_pop('b', 1, sorted_func=func, reverse=False) == item2
 
-        with pytest.raises(IndexError):
-            r.sorted_pop('b', 1, sorted_func=func, reverse=False)
+        # with pytest.raises(IndexError):
+        #     r.sorted_pop('b', 1, sorted_func=func, reverse=False)
 
     # Sets Section
 
@@ -352,7 +353,6 @@ class TestRedisExtensionsCommands(object):
         assert len(eles) == 0
         eles = r.srandmember_shuffle('a', 5)
         assert len(eles) == 0
-
 
     # ZSorts(Sorted Sets) Section
 

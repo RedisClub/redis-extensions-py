@@ -345,6 +345,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         locked = self.acquire_lock(name)
         # Get Items
         items = self.lrange(name, 0, -1)
+        # IndexError: list index out of range
+        # Raises IndexError => Return None
+        if rank > len(items) - 1:
+            return
         # Sort Items
         sorts = sorted(items, key=sorted_func, reverse=reverse)
         # Get Item
