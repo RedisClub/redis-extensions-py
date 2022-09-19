@@ -246,7 +246,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         # As of Redis version 6.2.0, this command is regarded as deprecated.
         # It can be replaced by SET with the GET argument when migrating or writing new code.
         warnings.warn(
-            f"{self.__class__.__name__}.getsetex() is deprecated. "
+            f"{self.__class__.__name__}.getsetex() is deprecated since Redis version 6.2.0. "
             f"Use {self.__class__.__name__}.set() with the GET/EX argument instead.",
             DeprecationWarning,
             stacklevel=2,
@@ -261,7 +261,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         # As of Redis version 6.2.0, this command is regarded as deprecated.
         # It can be replaced by SET with the GET argument when migrating or writing new code.
         warnings.warn(
-            f"{self.__class__.__name__}.getorset() is deprecated. "
+            f"{self.__class__.__name__}.getorset() is deprecated since Redis version 6.2.0. "
             f"Use {self.__class__.__name__}.set() with the GET/NX argument instead.",
             DeprecationWarning,
             stacklevel=2,
@@ -276,7 +276,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         # As of Redis version 6.2.0, this command is regarded as deprecated.
         # It can be replaced by SET with the GET argument when migrating or writing new code.
         warnings.warn(
-            f"{self.__class__.__name__}.getorsetex() is deprecated. "
+            f"{self.__class__.__name__}.getorsetex() is deprecated since Redis version 6.2.0. "
             f"Use {self.__class__.__name__}.set() with the GET/EX/NX argument instead.",
             DeprecationWarning,
             stacklevel=2,
@@ -411,7 +411,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         # SPOP
         # Starting with Redis version 3.2.0: Added the count argument.
         warnings.warn(
-            f"{self.__class__.__name__}.multispop() is deprecated. "
+            f"{self.__class__.__name__}.multispop() is deprecated since Redis version 3.2.0. "
             f"Use {self.__class__.__name__}.spop() with the COUNT argument instead.",
             DeprecationWarning,
             stacklevel=2,
@@ -703,8 +703,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.hsetnx(name, key, json.dumps(value, **self.__json_params(cls, json_params)))
 
     def hmset_json(self, name: str, mapping: Dict[str, Any], cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseStrT:
+        # HMSET
+        # As of Redis version 4.0.0, this command is regarded as deprecated.
+        # It can be replaced by HSET with multiple field-value pairs when migrating or writing new code.
         warnings.warn(
-            f"{self.__class__.__name__}.hmsetjson() is deprecated. "
+            f"{self.__class__.__name__}.hmsetjson() is deprecated since Redis version 4.0.0. "
             f"Use {self.__class__.__name__}.hsetjson() instead.",
             DeprecationWarning,
             stacklevel=2,
