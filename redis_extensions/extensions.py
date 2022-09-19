@@ -242,6 +242,15 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``time`` can be represented by an integer or a Python timedelta object.
         """
+        # GETSET
+        # As of Redis version 6.2.0, this command is regarded as deprecated.
+        # It can be replaced by SET with the GET argument when migrating or writing new code.
+        warnings.warn(
+            f"{self.__class__.__name__}.getsetex() is deprecated. "
+            f"Use {self.__class__.__name__}.set() with the GET argument instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.pipeline().getset(name, value).expire(name, time).execute()[0]
 
     def get_or_set(self, name: str, value: Optional[EncodableT] = None) -> Tuple[ResponseT, ResponseT]:
@@ -385,7 +394,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         # Starting with Redis version 3.2.0: Added the count argument.
         warnings.warn(
             f"{self.__class__.__name__}.multispop() is deprecated. "
-            f"Use {self.__class__.__name__}.spop() instead.",
+            f"Use {self.__class__.__name__}.spop() with the COUNT argument instead.",
             DeprecationWarning,
             stacklevel=2,
         )
