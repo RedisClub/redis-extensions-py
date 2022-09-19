@@ -247,7 +247,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         # It can be replaced by SET with the GET argument when migrating or writing new code.
         warnings.warn(
             f"{self.__class__.__name__}.getsetex() is deprecated. "
-            f"Use {self.__class__.__name__}.set() with the GET argument instead.",
+            f"Use {self.__class__.__name__}.set() with the GET/EX argument instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -257,12 +257,30 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Return the value at key ``name``, or Set and return if the key doesn't exist.
         """
+        # GETSET
+        # As of Redis version 6.2.0, this command is regarded as deprecated.
+        # It can be replaced by SET with the GET argument when migrating or writing new code.
+        warnings.warn(
+            f"{self.__class__.__name__}.getorset() is deprecated. "
+            f"Use {self.__class__.__name__}.set() with the GET/NX argument instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.pipeline().set(name, value, nx=True).get(name).execute()[::-1]
 
     def get_or_setex(self, name: str, time: ExpiryT, value: Optional[EncodableT] = None) -> Tuple[ResponseT, ResponseT]:
         """
         Return the value at key ``name``, or Setex and return if the key doesn't exist.
         """
+        # GETSET
+        # As of Redis version 6.2.0, this command is regarded as deprecated.
+        # It can be replaced by SET with the GET argument when migrating or writing new code.
+        warnings.warn(
+            f"{self.__class__.__name__}.getorsetex() is deprecated. "
+            f"Use {self.__class__.__name__}.set() with the GET/EX/NX argument instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.pipeline().set(name, value, ex=time, nx=True).get(name).execute()[::-1]
 
     # Lists Section
