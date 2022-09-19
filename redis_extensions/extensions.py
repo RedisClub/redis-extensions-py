@@ -381,6 +381,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         Remove and return multi random member of set ``name``.
         """
+        # SPOP
+        # Starting with Redis version 3.2.0: Added the count argument.
+        warnings.warn(
+            f"{self.__class__.__name__}.multispop() is deprecated. "
+            f"Use {self.__class__.__name__}.spop() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         p = self.pipeline()
         for _ in range(num):
             p.spop(name)
