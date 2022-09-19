@@ -338,8 +338,23 @@ class TestRedisExtensionsCommands(object):
 
     def test_srandmember_shuffle(self, r):
         r.sadd('a', *range(10))
+
+        ele = r.srandmember_shuffle('a')
+        assert isinstance(ele, str)
+        eles = r.srandmember_shuffle('a', 1)
+        assert len(eles) == 1
         eles = r.srandmember_shuffle('a', 5)
         assert len(eles) == 5
+
+        r.multi_spop('a', 10)
+
+        ele = r.srandmember_shuffle('a')
+        assert ele is None
+        eles = r.srandmember_shuffle('a', 1)
+        assert len(eles) == 0
+        eles = r.srandmember_shuffle('a', 5)
+        assert len(eles) == 0
+
 
     # ZSorts(Sorted Sets) Section
 

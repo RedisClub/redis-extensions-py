@@ -371,7 +371,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         # Srandmember isn't random enough
         # When number is close to ``the number of elements inside the set``
         memebers = self.srandmember(name, number=number)
-        random.shuffle(memebers)
+        if memebers:
+            random.shuffle(memebers)
         return memebers
 
     # ZSorts(Sorted Sets) Section
