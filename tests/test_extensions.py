@@ -561,7 +561,7 @@ class TestRedisExtensionsCommands(object):
         # Acquire Lock Auto Release
         assert r.acquire_lock('b', time=1)
         assert r.exists('r:lock:b')
-        time.sleep(1)
+        time.sleep(1.5)
         assert not r.exists('r:lock:b')
 
     def test_release_lock(self, r):
@@ -600,7 +600,7 @@ class TestRedisExtensionsCommands(object):
         token2 = r.token('a', buf=True, buf_time=300)
         assert r.token_exists('a', token)
         token3 = r.token('a', buf=True, buf_time=1)
-        time.sleep(1)
+        time.sleep(1.5)
         assert not r.token_exists('a', token2)
         assert not r.token_exists('a', u'中文')
 
