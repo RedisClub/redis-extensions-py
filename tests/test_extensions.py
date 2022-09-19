@@ -5,6 +5,8 @@ import time
 
 import pytest
 
+from redis_extensions.compat import basestring
+
 
 class TestRedisExtensionsCommands(object):
 
@@ -340,7 +342,7 @@ class TestRedisExtensionsCommands(object):
         r.sadd('a', *range(10))
 
         ele = r.srandmember_shuffle('a')
-        assert isinstance(ele, str)
+        assert isinstance(ele, basestring)
         eles = r.srandmember_shuffle('a', 1)
         assert len(eles) == 1
         eles = r.srandmember_shuffle('a', 5)
@@ -354,7 +356,6 @@ class TestRedisExtensionsCommands(object):
         assert len(eles) == 0
         eles = r.srandmember_shuffle('a', 5)
         assert len(eles) == 0
-
 
     # ZSorts(Sorted Sets) Section
 
