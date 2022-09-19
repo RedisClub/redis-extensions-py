@@ -604,12 +604,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
     # JSON Section
     def __json_params(self, cls=None, json_params=None):
-        # TODO: Change to merge dict by {**a, **b} when drop support Python2.x
-        # cls for backwards compatibility
-        # return {**{'cls': cls}, **(json_params or {})}
-        json_params = json_params or {}
-        json_params['cls'] = cls
-        return json_params
+        return {**{'cls': cls}, **(json_params or {})}
 
     def set_json(self, name, value, ex=None, px=None, nx=False, xx=False, cls=None, json_params=None):
         """
