@@ -8,6 +8,7 @@ import signal
 import socket
 import time as mod_time
 import uuid
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import gvcode
 import shortuuid
@@ -16,9 +17,18 @@ from CodeConvert import CodeConvert as cc
 from redis import StrictRedis
 from redis.client import bool_ok
 from redis.exceptions import ResponseError, WatchError
+from redis.typing import AnyKeyT, EncodableT, ExpiryT, FieldT, KeyT, ZScoreBoundT
 from TimeConvert import TimeConvert as tc
 
 from .expires import BaseRedisExpires
+
+
+ResponseT = Union[Awaitable, Any]
+ResponseIntT = Union[Awaitable[int], int]
+ResponseStrT = Union[Awaitable[str], str]
+ResponseBoolT = Union[Awaitable[bool], bool]
+ResponseListT = Union[Awaitable[list], list]
+ResponseZ = Union[List[str], List[Tuple[str, float]]]
 
 
 logger = logging.getLogger('redis_extensions')
@@ -45,7 +55,7 @@ for signum in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM, signal.SIGTSTP]:
 
 
 # Get the local ip
-def get_network_ip():
+def get_network_ip() -> str:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -71,19 +81,19 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         tc.__init__(timezone=self.timezone)
         super(StrictRedisExtensions, self).__init__(*args, **kwargs)
 
-    def __str(self, x):
+    def __str(self, x: Any) -> Union[str, bytes]:
         if isinstance(x, int):
             return str(x)
         return x if isinstance(x, (str, bytes)) else bytes(x)
 
-    def __local_ymd(self, format='%Y-%m-%d'):
+    def __local_ymd(self, format: str = '%Y-%m-%d') -> str:
         return tc.local_string(format=format)
 
-    def __uuid(self, short_uuid=False):
+    def __uuid(self, short_uuid: bool = False) -> str:
         return shortuuid.uuid() if short_uuid else uuid.uuid4().hex
 
     # Keys Section(Delete Relative)
-    def delete_keys(self, pattern='*', iter=False, count=None):
+    def delete_keys(self, pattern: str = '*', iter: bool = False, count: Optional[int] = None) -> int:
         """
         Delete a list of keys matching ``pattern``.
 
@@ -104,13 +114,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 break
         return dels
 
-    def __todel(self, key, matched_list):
+    def __todel(self, key: str, matched_list: List) -> bool:
         for matched in matched_list:
             if matched in key:
                 return False
         return True
 
-    def delete_unmatched_keys(self, pattern='*', matched_list=[], iter=False):
+    def delete_unmatched_keys(self, pattern: str = '*', matched_list: List = [], iter: bool = False) -> int:
         logger.warning('Not use in production, this func is just for manual delete keys which unused for yonks')
         dels = 0
         keys = self.scan_iter(pattern, dels) if iter else self.keys(pattern)
@@ -119,7 +129,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 dels += self.delete(key)
         return dels
 
-    def delete_yonks_unused_keys(self, pattern='*', iter=False, idletime=86400):
+    def delete_yonks_unused_keys(self, pattern: str = '*', iter: bool = False, idletime: int = 86400) -> int:
         logger.warning('Not use in production, this func is just for manual delete keys which unused for yonks')
         dels = 0
         keys = self.scan_iter(pattern, dels) if iter else self.keys(pattern)
@@ -129,7 +139,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return dels
 
     # Keys Section(Incr/Decr Relative)
-    def incr_limit(self, name, amount=1, limit=None, value=None):
+    def incr_limit(self, name: str, amount: int = 1, limit: Optional[int] = None, value: Optional[int] = None) -> Optional[int]:
         """
         Increments the value of ``key`` by ``amount``. If no key exists, the value will be initialized as ``amount``.
         """
@@ -142,7 +152,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.release_lock(name, locked)
         return amount
 
-    def decr_limit(self, name, amount=1, limit=None, value=None):
+    def decr_limit(self, name: str, amount: int = 1, limit: Optional[int] = None, value: Optional[int] = None) -> Optional[int]:
         """
         Decrements the value of ``key`` by ``amount``. If no key exists, the value will be initialized as 0 - ``amount``.
         """
@@ -155,44 +165,44 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.release_lock(name, locked)
         return amount
 
-    def incr_cmp(self, name, amount=1, cmp='>', limit=0):
+    def incr_cmp(self, name: str, amount: int = 1, cmp: str = '>', limit: int = 0) -> Tuple[int, bool]:
         if not re.match(r'^[><=]+$', cmp):
             raise ValueError('Cmp Value Incorrect')
         amount = self.incr(name, amount)
         return amount, eval('{0}{1}{2}'.format(amount, cmp, limit))
 
-    def incr_gt(self, name, amount=1, limit=0):
+    def incr_gt(self, name: str, amount: int = 1, limit: int = 0) -> Tuple[int, bool]:
         amount = self.incr(name, amount)
         return amount, amount > limit
 
-    def incr_ge(self, name, amount=1, limit=0):
+    def incr_ge(self, name: str, amount: int = 1, limit: int = 0) -> Tuple[int, bool]:
         amount = self.incr(name, amount)
         return amount, amount >= limit
 
-    def incr_eq(self, name, amount=1, limit=0):
+    def incr_eq(self, name: str, amount: int = 1, limit: int = 0) -> Tuple[int, bool]:
         amount = self.incr(name, amount)
         return amount, amount == limit
 
-    def decr_cmp(self, name, amount=1, cmp='<', limit=0):
+    def decr_cmp(self, name: str, amount: int = 1, cmp: str = '<', limit: int = 0) -> Tuple[int, bool]:
         if not re.match(r'^[><=]+$', cmp):
             raise ValueError('Cmp Value Incorrect')
         amount = self.decr(name, amount)
         return amount, eval('{0}{1}{2}'.format(amount, cmp, limit))
 
-    def decr_lt(self, name, amount=1, limit=0):
+    def decr_lt(self, name: str, amount: int = 1, limit: int = 0) -> Tuple[int, bool]:
         amount = self.decr(name, amount)
         return amount, amount < limit
 
-    def decr_le(self, name, amount=1, limit=0):
+    def decr_le(self, name: str, amount: int = 1, limit: int = 0) -> Tuple[int, bool]:
         amount = self.decr(name, amount)
         return amount, amount <= limit
 
-    def decr_eq(self, name, amount=1, limit=0):
+    def decr_eq(self, name: str, amount: int = 1, limit: int = 0) -> Tuple[int, bool]:
         amount = self.decr(name, amount)
         return amount, amount == limit
 
     # # Keys Section(Rename Relative)
-    def quiet_rename(self, src, dst):
+    def quiet_rename(self, src: KeyT, dst: KeyT) -> ResponseBoolT:
         # if self.exists(src):
         #     try:
         #         return self.rename(src, dst)
@@ -208,13 +218,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return bool_ok(self.eval(quiet_rename_script, 2, src, dst))
 
     # Strings Section
-    def get_delete(self, name):
+    def get_delete(self, name: str) -> Tuple[ResponseT, ResponseT]:
         """
         Return the value at key ``name`` & Delete key ``name``.
         """
         return self.pipeline().get(name).delete(name).execute()
 
-    def get_rename(self, name, suffix='del'):
+    def get_rename(self, name: str, suffix: str = 'del') -> Tuple[ResponseT, ResponseT]:
         """
         Return the value at key ``name`` & Rename key ``name`` to ``name_suffix``.
 
@@ -225,7 +235,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         except ResponseError:
             return [None, False]
 
-    def getsetex(self, name, time, value):
+    def getsetex(self, name: str, time: ExpiryT, value: EncodableT) -> Tuple[ResponseT, ResponseT]:
         """
         Set the value of key ``name`` to ``value`` that expires in ``time`` seconds & Returns the old value at key ``name`` atomically.
 
@@ -233,44 +243,44 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.pipeline().getset(name, value).expire(name, time).execute()[0]
 
-    def get_or_set(self, name, value=None):
+    def get_or_set(self, name: str, value: Optional[EncodableT] = None) -> Tuple[ResponseT, ResponseT]:
         """
         Return the value at key ``name``, or Set and return if the key doesn't exist.
         """
         return self.pipeline().set(name, value, nx=True).get(name).execute()[::-1]
 
-    def get_or_setex(self, name, time, value=None):
+    def get_or_setex(self, name: str, time: ExpiryT, value: Optional[EncodableT] = None) -> Tuple[ResponseT, ResponseT]:
         """
         Return the value at key ``name``, or Setex and return if the key doesn't exist.
         """
         return self.pipeline().set(name, value, ex=time, nx=True).get(name).execute()[::-1]
 
     # Lists Section
-    def lpush_nx(self, name, value, force=True):
+    def lpush_nx(self, name: str, value: str, force: bool = True) -> ResponseIntT:
         """
         Push ``value`` onto the head of the list ``name`` if ``value`` not exists.
 
         ``force`` if set to True, will ``lrem`` first then lpush.
         """
         if force:
-            return self.pipeline().lrem(name, 0, value).lpush(name, value).execute()
+            return self.pipeline().lrem(name, 0, value).lpush(name, value).execute()[-1]
         else:
             if not self.__str(value) in self.lrange(name, 0, -1):
                 return self.lpush(name, value)
 
-    def rpush_nx(self, name, value, force=True):
+    def rpush_nx(self, name: str, value: str, force: bool = True) -> ResponseIntT:
         """
         Push ``value`` onto the tail of the list ``name`` if ``value`` not exists.
 
         ``force`` if set to True, will ``lrem`` first then rpush.
         """
         if force:
-            return self.pipeline().lrem(name, 0, value).rpush(name, value).execute()
+            return self.pipeline().lrem(name, 0, value).rpush(name, value).execute()[-1]
         else:
             if not self.__str(value) in self.lrange(name, 0, -1):
                 return self.rpush(name, value)
 
-    def multi_lpop(self, name, num=1):
+    def multi_lpop(self, name: str, num: int = 1) -> Tuple[ResponseListT, ResponseStrT, ResponseIntT]:
         """
         Pop multi items from the head of the list ``name``.
         """
@@ -278,7 +288,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             raise ValueError('The num argument should not be negative')
         return self.pipeline().lrange(name, 0, num - 1).ltrim(name, num, -1).llen(name).execute()
 
-    def multi_rpop(self, name, num=1):
+    def multi_rpop(self, name: str, num: int = 1) -> Tuple[ResponseListT, ResponseStrT, ResponseIntT]:
         """
         Pop multi items from the tail of the list ``name``.
         """
@@ -286,7 +296,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             raise ValueError('The num argument should not be negative')
         return self.pipeline().lrange(name, -num, -1).ltrim(name, 0, -num - 1).llen(name).execute()
 
-    def multi_lpop_delete(self, name, num=1):
+    def multi_lpop_delete(self, name: str, num: int = 1) -> Tuple[ResponseListT, ResponseT]:
         """
         Pop multi items from the head of the list ``name`` & Delete the list ``name``
         """
@@ -294,7 +304,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             raise ValueError('The num argument should not be negative')
         return self.pipeline().lrange(name, 0, num - 1).delete(name).execute()
 
-    def multi_rpop_delete(self, name, num=1):
+    def multi_rpop_delete(self, name: str, num: int = 1) -> Tuple[ResponseListT, ResponseT]:
         """
         Pop multi items from the tail of the list ``name`` & Delete the list ``name``
         """
@@ -302,31 +312,31 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             raise ValueError('The num argument should not be negative')
         return self.pipeline().lrange(name, -num, -1).delete(name).execute()
 
-    def trim_lpush(self, name, num, *values):
+    def trim_lpush(self, name: str, num: int, *values: FieldT) -> Tuple[ResponseIntT, ResponseStrT, ResponseIntT]:
         """
         Push ``values`` onto the head of the list ``name`` & Limit ``num`` from the head of the list ``name``.
         """
         return self.pipeline().lpush(name, *values).ltrim(name, 0, num - 1).llen(name).execute()
 
-    def trim_rpush(self, name, num, *values):
+    def trim_rpush(self, name: str, num: int, *values: FieldT) -> Tuple[ResponseIntT, ResponseStrT, ResponseIntT]:
         """
         Push ``values`` onto the tail of the list ``name`` & Limit ``num`` from the tail of the list ``name``.
         """
         return self.pipeline().rpush(name, *values).ltrim(name, -num, - 1).llen(name).execute()
 
-    def delete_lpush(self, name, *values):
+    def delete_lpush(self, name: str, *values: FieldT) -> Tuple[ResponseIntT, ResponseT]:
         """
         Delete key specified by ``name`` & Push ``values`` onto the head of the list ``name``.
         """
         return self.pipeline().delete(name).lpush(name, *values).execute()[::-1]
 
-    def delete_rpush(self, name, *values):
+    def delete_rpush(self, name: str, *values: FieldT) -> Tuple[ResponseIntT, ResponseT]:
         """
         Delete key specified by ``name`` & Push ``values`` onto the tail of the list ``name``.
         """
         return self.pipeline().delete(name).rpush(name, *values).execute()[::-1]
 
-    def lpush_ex(self, name, time, value):
+    def lpush_ex(self, name: str, time: ExpiryT, value: AnyKeyT) -> ResponseT:
         """
         Push ``value`` that expires in ``time`` seconds onto the head of the list ``name``.
 
@@ -336,11 +346,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             time = time.seconds + time.days * 24 * 3600
         return self.zadd(name, {value: mod_time.time() + time})
 
-    def lrange_ex(self, name):
+    def lrange_ex(self, name: str) -> Tuple[ResponseT, ResponseT]:
         cur_time = mod_time.time()
         return self.pipeline().zrangebyscore(name, cur_time, '+inf').zremrangebyscore(name, 0, cur_time).execute()
 
-    def sorted_pop(self, name, rank=0, sorted_func=None, reverse=True):
+    def sorted_pop(self, name: str, rank: int = 0, sorted_func: Optional[Union[type, Callable]] = None, reverse: bool = True) -> Optional[str]:
         # Acquire Lock
         locked = self.acquire_lock(name)
         # Get Items
@@ -360,13 +370,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return item
 
     # Sets Section
-    def delete_sadd(self, name, *values):
+    def delete_sadd(self, name: str, *values: FieldT) -> Tuple[ResponseIntT, ResponseT]:
         """
         Delete key specified by ``name`` & Add ``value(s)`` to set ``name``.
         """
         return self.pipeline().delete(name).sadd(name, *values).execute()[::-1]
 
-    def multi_spop(self, name, num=1):
+    def multi_spop(self, name: str, num: int = 1) -> Tuple[List[Optional[str]], int]:
         """
         Remove and return multi random member of set ``name``.
         """
@@ -376,7 +386,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         eles = p.execute()
         return eles, sum(x is not None for x in eles)
 
-    def srandmember_shuffle(self, name, number=None):
+    def srandmember_shuffle(self, name: str, number: Optional[int] = None) -> Union[str, List, None]:
         # https://github.com/antirez/redis/blob/e4903ce586c191fe4699913a5e360e12812024a3/src/t_set.c#L616
         # Srandmember isn't random enough
         # When number is close to ``the number of elements inside the set``
@@ -386,10 +396,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return memebers
 
     # ZSorts(Sorted Sets) Section
-    def __list_substractor(self, minuend, subtrahend):
+    def __list_substractor(self, minuend: ResponseZ, subtrahend: ResponseZ) -> ResponseZ:
         return [x for x in minuend if x not in subtrahend]
 
-    def zgt(self, name, value, withscores=False, score_cast_func=float):
+    def zgt(self, name: str, value: ZScoreBoundT, withscores: bool = False, score_cast_func: Union[type, Callable] = float) -> ResponseZ:
         """
         Return a range of values from the sorted set ``name`` with scores (``value`` < score < ``+inf``).
 
@@ -401,7 +411,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         gte, eq = self.pipeline().zrangebyscore(name, value, '+inf', withscores=withscores, score_cast_func=score_cast_func).zrangebyscore(name, value, value, withscores=withscores, score_cast_func=score_cast_func).execute()
         return self.__list_substractor(gte, eq)
 
-    def zge(self, name, value, withscores=False, score_cast_func=float):
+    def zge(self, name: str, value: ZScoreBoundT, withscores: bool = False, score_cast_func: Union[type, Callable] = float) -> ResponseT:
         """
         Return a range of values from the sorted set ``name`` with scores (``value`` <= score < ``+inf``).
 
@@ -412,7 +422,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.zrangebyscore(name, value, '+inf', withscores=withscores, score_cast_func=score_cast_func)
 
-    def zlt(self, name, value, withscores=False, score_cast_func=float):
+    def zlt(self, name: str, value: ZScoreBoundT, withscores: bool = False, score_cast_func: Union[type, Callable] = float) -> ResponseZ:
         """
         Return a range of values from the sorted set ``name`` with scores (``-inf`` < score < ``value``).
 
@@ -424,7 +434,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         lte, eq = self.pipeline().zrangebyscore(name, '-inf', value, withscores=withscores, score_cast_func=score_cast_func).zrangebyscore(name, value, value, withscores=withscores, score_cast_func=score_cast_func).execute()
         return self.__list_substractor(lte, eq)
 
-    def zle(self, name, value, withscores=False, score_cast_func=float):
+    def zle(self, name: str, value: ZScoreBoundT, withscores: bool = False, score_cast_func: Union[type, Callable] = float) -> ResponseT:
         """
         Return a range of values from the sorted set ``name`` with scores (``-inf`` < score <= ``value``).
 
@@ -435,33 +445,33 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.zrangebyscore(name, '-inf', value, withscores=withscores, score_cast_func=score_cast_func)
 
-    def zgtcount(self, name, value):
+    def zgtcount(self, name: str, value: ZScoreBoundT) -> int:
         """
         Returns the number of elements in the sorted set at key ``name`` with scores (``value`` < score < ``+inf``).
         """
         ge, eq = self.pipeline().zcount(name, value, '+inf').zcount(name, value, value).execute()
         return ge - eq
 
-    def zgecount(self, name, value):
+    def zgecount(self, name: str, value: ZScoreBoundT) -> ResponseT:
         """
         Returns the number of elements in the sorted set at key ``name`` with scores (``value`` <= score < ``+inf``).
         """
         return self.zcount(name, value, '+inf')
 
-    def zltcount(self, name, value):
+    def zltcount(self, name: str, value: ZScoreBoundT) -> int:
         """
         Returns the number of elements in the sorted set at key ``name`` with scores (``-inf`` < score < ``value``).
         """
         le, eq = self.pipeline().zcount(name, '-inf', value).zcount(name, value, value).execute()
         return le - eq
 
-    def zlecount(self, name, value):
+    def zlecount(self, name: str, value: ZScoreBoundT) -> ResponseT:
         """
         Returns the number of elements in the sorted set at key ``name`` with scores (``-inf`` < score <= ``value``).
         """
         return self.zcount(name, '-inf', value)
 
-    def zuniquerank(self, name, value):
+    def zuniquerank(self, name: str, value: EncodableT) -> Optional[int]:
         """
         Return a unique 0-based value indicating the rank of ``value`` in sorted set ``name``.
         """
@@ -470,7 +480,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return
         return self.zltcount(name, score)
 
-    def zuniquerevrank(self, name, value):
+    def zuniquerevrank(self, name: str, value: EncodableT) -> Optional[int]:
         """
         Return a unique 0-based value indicating the descending rank of ``value`` in sorted set ``name``.
         """
@@ -479,13 +489,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return
         return self.zgtcount(name, score)
 
-    def ztopn(self, name, count, desc=True, withscores=False, score_cast_func=float):
+    def ztopn(self, name: str, count: int, desc: bool = True, withscores: bool = False, score_cast_func: Union[type, Callable] = float) -> ResponseZ:
         return self.zrange(name, 0, count - 1, desc=desc, withscores=withscores, score_cast_func=score_cast_func)
 
-    def zistopn(self, name, value, count):
+    def zistopn(self, name: str, value: str, count: int) -> bool:
         return value in self.ztopn(name, count, withscores=False)
 
-    def zmax(self, name, withscores=False, score_cast_func=float):
+    def zmax(self, name: str, withscores: bool = False, score_cast_func: Union[type, Callable] = float) -> Union[str, Tuple[str, float]]:
         """
         Return ``max`` value from sorted set ``name``.
 
@@ -499,7 +509,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         except IndexError:
             return
 
-    def zmin(self, name, withscores=False, score_cast_func=float):
+    def zmin(self, name: str, withscores: bool = False, score_cast_func: Union[type, Callable] = float) -> Union[str, Tuple[str, float]]:
         """
         Return ``min`` value from sorted set ``name``.
 
@@ -513,19 +523,19 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         except IndexError:
             return
 
-    def __timestamps(self, desc=False):
+    def __timestamps(self, desc: bool = False) -> int:
         stamp = int(mod_time.time() * 1000)
         return self.max_timestamp - stamp if desc else stamp
 
-    def __stampscore(self, score, desc=False):
+    def __stampscore(self, score: float, desc: bool = False) -> float:
         return score * self.rate + self.__timestamps(desc)
 
-    def rawscore(self, score):
+    def rawscore(self, score: Union[str, int, float]) -> float:
         if not score:
             return 0.0
         return float(int(float(score) / self.rate))
 
-    def zaddwithstamps(self, name, *args, **kwargs):
+    def zaddwithstamps(self, name: str, *args: List, **kwargs: Dict) -> ResponseT:
         desc = 'desc' in kwargs and kwargs.pop('desc')
         mapping = kwargs.pop('mapping') if 'mapping' in kwargs else {}
         for idx, item in enumerate(args):
@@ -535,83 +545,83 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             mapping[k] = self.__stampscore(v, desc)
         return self.zadd(name, mapping)
 
-    def zincrbywithstamps(self, name, value, amount=1, desc=False):
+    def zincrbywithstamps(self, name: str, value: EncodableT, amount: int = 1, desc: bool = False) -> ResponseT:
         return self.zadd(name, {value: self.__stampscore(self.rawscore(self.zscore(name, value)) + amount, desc)})
 
-    def zrawscore(self, name, value):
+    def zrawscore(self, name: str, value: EncodableT) -> float:
         """
         Return the raw score of element ``value`` in sorted set ``name``
         """
         return self.rawscore(self.zscore(name, value))
 
     # Hash Section
-    def hincrbyex(self, name, key, amount=1, time=1800):
+    def hincrbyex(self, name: str, key: str, amount: int = 1, time: ExpiryT = 1800) -> Tuple[ResponseIntT, Optional[ResponseT]]:
         if self.exists(name):
             return self.hincrby(name, key, amount=amount), None
         return self.pipeline().hincrby(name, key, amount=amount).expire(name, time=time).execute()
 
     # INT Section
-    def get_int(self, name, default=0):
+    def get_int(self, name: str, default: int = 0) -> int:
         return int(self.get(name) or default)
 
-    def hget_int(self, name, key, default=0):
+    def hget_int(self, name: str, key: str, default: int = 0) -> int:
         return int(self.hget(name, key) or default)
 
-    def hmget_int(self, name, keys, default=0, *args):
+    def hmget_int(self, name: str, keys: List, default: int = 0, *args: List) -> List[int]:
         vals = self.hmget(name, keys, *args)
         return [int(v or default) for v in vals]
 
-    def hvals_int(self, name, default=0):
+    def hvals_int(self, name: str, default: int = 0) -> List[int]:
         vals = self.hvals(name)
         return [int(v or default) for v in vals]
 
-    def hgetall_int(self, name, default=0):
+    def hgetall_int(self, name: str, default: int = 0) -> Dict[str, int]:
         kvs = self.hgetall(name)
         return {k: int(v or default) for (k, v) in kvs.items()}
 
     # FLOAT Section
-    def get_float(self, name, default=0):
+    def get_float(self, name: str, default: int = 0) -> float:
         return float(self.get(name) or default)
 
-    def hget_float(self, name, key, default=0):
+    def hget_float(self, name: str, key: str, default: int = 0) -> float:
         return float(self.hget(name, key) or default)
 
-    def hmget_float(self, name, keys, default=0, *args):
+    def hmget_float(self, name: str, keys: List, default: int = 0, *args: List) -> List[float]:
         vals = self.hmget(name, keys, *args)
         return [float(v or default) for v in vals]
 
-    def hvals_float(self, name, default=0):
+    def hvals_float(self, name: str, default: int = 0) -> List[float]:
         vals = self.hvals(name)
         return [float(v or default) for v in vals]
 
-    def hgetall_float(self, name, default=0):
+    def hgetall_float(self, name: str, default: int = 0) -> Dict[str, float]:
         kvs = self.hgetall(name)
         return {k: float(v or default) for (k, v) in kvs.items()}
 
     # STR Section
-    def get_str(self, name, default=''):
+    def get_str(self, name: str, default: str = '') -> ResponseT:
         return self.get(name) or default
 
-    def hget_str(self, name, key, default=''):
+    def hget_str(self, name: str, key: str, default: str = '') -> ResponseStrT:
         return self.hget(name, key) or default
 
-    def hmget_str(self, name, keys, default='', *args):
+    def hmget_str(self, name: str, keys: List, default: str = '', *args: List) -> List[str]:
         vals = self.hmget(name, keys, *args)
         return [(v or default) for v in vals]
 
-    def hvals_str(self, name, default=''):
+    def hvals_str(self, name: str, default: str = '') -> List[str]:
         vals = self.hvals(name)
         return [(v or default) for v in vals]
 
-    def hgetall_str(self, name, default=''):
+    def hgetall_str(self, name: str, default: str = '') -> Dict[str, str]:
         kvs = self.hgetall(name)
         return {k: (v or default) for (k, v) in kvs.items()}
 
     # JSON Section
-    def __json_params(self, cls=None, json_params=None):
+    def __json_params(self, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> Dict[str, Any]:
         return {**{'cls': cls}, **(json_params or {})}
 
-    def set_json(self, name, value, ex=None, px=None, nx=False, xx=False, cls=None, json_params=None):
+    def set_json(self, name: str, value: EncodableT, ex: Optional[ExpiryT] = None, px: Optional[ExpiryT] = None, nx: bool = False, xx: bool = False, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseT:
         """
         Set the value at key ``name`` to ``json dumps value``.
 
@@ -625,7 +635,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.set(name, json.dumps(value, **self.__json_params(cls, json_params)), ex=ex, px=px, nx=nx, xx=xx)
 
-    def setex_json(self, name, time, value, cls=None, json_params=None):
+    def setex_json(self, name: str, time: ExpiryT, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseT:
         """
         Set the value of key ``name`` to ``json dumps value`` that expires in ``time`` seconds.
 
@@ -633,77 +643,77 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.setex(name, time, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def setnx_json(self, name, value, cls=None, json_params=None):
+    def setnx_json(self, name: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseT:
         """
         Set the value of key ``name`` to ``json dumps value`` if key doesn't exist.
         """
         return self.setnx(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def get_json(self, name, default='{}'):
+    def get_json(self, name: str, default: str = '{}') -> Dict[str, Any]:
         return json.loads(self.get(name) or default)
 
-    def hset_json(self, name, key, value, cls=None, json_params=None):
+    def hset_json(self, name: str, key: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseIntT:
         return self.hset(name, key, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def hsetnx_json(self, name, key, value, cls=None, json_params=None):
+    def hsetnx_json(self, name: str, key: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseBoolT:
         return self.hsetnx(name, key, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def hmset_json(self, name, mapping, cls=None, json_params=None):
+    def hmset_json(self, name: str, mapping: Dict[str, Any], cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseStrT:
         mapping = {k: json.dumps(v, **self.__json_params(cls, json_params)) for (k, v) in mapping.items()}
         return self.hmset(name, mapping)
 
-    def hget_json(self, name, key, default='{}'):
+    def hget_json(self, name: str, key: str, default: str = '{}') -> Dict[str, Any]:
         return json.loads(self.hget(name, key) or default)
 
-    def hmget_json(self, name, keys, default='{}', *args):
+    def hmget_json(self, name: str, keys: List, default: str = '{}', *args: List) -> List[Dict[str, Any]]:
         vals = self.hmget(name, keys, *args)
         return [json.loads(v or default) for v in vals]
 
-    def hvals_json(self, name, default='{}'):
+    def hvals_json(self, name: str, default: str = '{}') -> List[Dict[str, Any]]:
         vals = self.hvals(name)
         return [json.loads(v or default) for v in vals]
 
-    def hgetall_json(self, name, default='{}'):
+    def hgetall_json(self, name: str, default: str = '{}') -> Dict[str, Any]:
         kvs = self.hgetall(name)
         return {k: json.loads(v or default) for (k, v) in kvs.items()}
 
-    def lpush_json(self, name, value, cls=None, json_params=None):
+    def lpush_json(self, name: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None):
         return self.lpush(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def rpush_json(self, name, value, cls=None, json_params=None):
+    def rpush_json(self, name: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None):
         return self.rpush(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def lpushx_json(self, name, value, cls=None, json_params=None):
+    def lpushx_json(self, name: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None):
         return self.lpushx(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def rpushx_json(self, name, value, cls=None, json_params=None):
+    def rpushx_json(self, name: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None):
         return self.rpushx(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def lpushnx_json(self, name, value, cls=None, force=True, json_params=None):
+    def lpushnx_json(self, name: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, force: bool = True, json_params: Dict[str, Any] = None):
         return self.lpushnx(name, json.dumps(value, **self.__json_params(cls, json_params)), force=force)
 
-    def rpushnx_json(self, name, value, cls=None, force=True, json_params=None):
+    def rpushnx_json(self, name: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, force: bool = True, json_params: Dict[str, Any] = None):
         return self.rpushnx(name, json.dumps(value, **self.__json_params(cls, json_params)), force=force)
 
-    def lpop_json(self, name, default='{}'):
+    def lpop_json(self, name: str, default: str = '{}') -> Dict[str, Any]:
         return json.loads(self.lpop(name) or default)
 
-    def rpop_json(self, name, default='{}'):
+    def rpop_json(self, name: str, default: str = '{}') -> Dict[str, Any]:
         return json.loads(self.rpop(name) or default)
 
-    def blpop_json(self, keys, timeout=0, cls=None, json_params=None):
+    def blpop_json(self, keys: List, timeout: int = 0, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
         kv = self.blpop(keys, timeout=timeout)
         return (kv[0], json.loads(kv[1], **self.__json_params(cls, json_params))) if kv else (None, None)
 
-    def brpop_json(self, keys, timeout=0, cls=None, json_params=None):
+    def brpop_json(self, keys: List, timeout: int = 0, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
         kv = self.brpop(keys, timeout=timeout)
         return (kv[0], json.loads(kv[1], **self.__json_params(cls, json_params))) if kv else (None, None)
 
     # Locks Section
-    def __lock_key(self, name):
+    def __lock_key(self, name: str) -> str:
         return '{0}lock:{1}'.format(KEY_PREFIX, name)
 
-    def acquire_lock(self, name, time=None, acquire_timeout=10, short=False):
+    def acquire_lock(self, name: str, time: Optional[ExpiryT] = None, acquire_timeout: int = 10, short: bool = False) -> Union[str, bool]:
         """
         Acquire lock for ``name``.
 
@@ -719,7 +729,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             mod_time.sleep(.001)
         return False
 
-    def release_lock(self, name, identifier):
+    def release_lock(self, name: str, identifier: str) -> bool:
         """
         Release lock for ``name``.
         """
@@ -739,13 +749,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 pass
         return False
 
-    def delete_lock(self, name):
+    def delete_lock(self, name: str) -> ResponseT:
         """
         Delete lock for ``name``.
         """
         return self.delete(self.__lock_key(name))
 
-    def exists_lock(self, name, regex=False):
+    def exists_lock(self, name: str, regex: bool = False) -> ResponseT:
         """
         Check lock for ``name`` exists or not.
         """
@@ -755,37 +765,37 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return self.keys(lock_key) if regex else self.exists(lock_key)
 
     # Quota Section
-    def __quota_key(self, name):
+    def __quota_key(self, name: str) -> str:
         return '{0}quota:{1}'.format(KEY_PREFIX, name)
 
-    def __quota(self, quota_key, amount=10, time=None):
+    def __quota(self, quota_key: str, amount: int = 10, time: Optional[ExpiryT] = None) -> bool:
         num = self.incr(quota_key)
         if num == 1 and time:
             self.expire(quota_key, time)
         return num > amount
 
-    def quota(self, name, amount=10, time=None):
+    def quota(self, name: str, amount: int = 10, time: Optional[ExpiryT] = None) -> bool:
         """
         Check whether overtop amount or not.
         """
         return self.__quota(self.__quota_key(name), amount=amount, time=time)
 
     # Quote/UnQuote Section
-    def __quote_key(self, name):
+    def __quote_key(self, name: str) -> str:
         return '{0}quote:{1}'.format(KEY_PREFIX, name)
 
-    def quote(self, s, ex=True, time=1800, short_uuid=False):
+    def quote(self, s: str, ex: bool = True, time: int = 1800, short_uuid: bool = False) -> str:
         identifier = self.__uuid(short_uuid)
         identifier_key = self.__quote_key(identifier)
         self.setex(identifier_key, time, s) if ex else self.set(identifier_key, s)
         return identifier
 
-    def unquote(self, identifier, buf=False):
+    def unquote(self, identifier: str, buf: bool = False) -> ResponseT:
         identifier_key = self.__quote_key(identifier)
         return self.get(identifier_key) if buf else self.get_delete(identifier_key)[0]
 
     # SignIns Section
-    def __get_signin_info(self, signname):
+    def __get_signin_info(self, signname: str) -> Tuple[str, Dict[str, Any], str, str, int]:
         """
         signin_info:
             signin_date
@@ -804,7 +814,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         delta_days = tc.string_delta(signin_date, last_signin_date, format='%Y-%m-%d')['days']
         return name, signin_info, signin_date, last_signin_date, delta_days
 
-    def signin(self, signname):
+    def signin(self, signname: str) -> Dict[str, Any]:
         name, signin_info, signin_date, _, delta_days = self.__get_signin_info(signname)
         # Today Unsigned, To Signin
         if delta_days != 0:
@@ -819,7 +829,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             self.set(name, json.dumps(signin_info))
         return dict(signin_info, signed_today=True, delta_days=delta_days)
 
-    def signin_status(self, signname):
+    def signin_status(self, signname: str) -> Dict[str, Any]:
         _, signin_info, _, last_signin_date, delta_days = self.__get_signin_info(signname)
         if delta_days == 0:  # Today Signed
             return dict(signin_info, signed_today=True, delta_days=delta_days)
@@ -833,13 +843,13 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         }
 
     # Token
-    def __token_key(self, name):
+    def __token_key(self, name: str) -> str:
         return '{0}token:{1}'.format(KEY_PREFIX, name)
 
-    def __token_buffer_key(self, name):
+    def __token_buffer_key(self, name: str) -> str:
         return '{0}token:buffer:{1}'.format(KEY_PREFIX, name)
 
-    def token(self, name, ex=True, time=1800, buf=True, buf_time=300, short_uuid=True, token_generate_func=None):
+    def token(self, name: str, ex: bool = True, time: int = 1800, buf: bool = True, buf_time: int = 300, short_uuid: bool = True, token_generate_func: Union[type, Callable] = None) -> str:
         """
         Generate token.
 
@@ -860,24 +870,24 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             self.setex(self.__token_buffer_key(name), buf_time, buf_code)
         return code
 
-    def token_exists(self, name, code):
+    def token_exists(self, name: str, code: str) -> bool:
         """
         Check token code exists or not.
         """
         return self.__str(code) in self.pipeline().get(self.__token_key(name)).get(self.__token_buffer_key(name)).execute()
 
-    def token_delete(self, name):
+    def token_delete(self, name: str) -> ResponseT:
         """
         Delete token.
         """
         return self.pipeline().delete(self.__token_key(name)).delete(self.__token_buffer_key(name)).execute()[0]
 
     # Counter
-    def _counter_key(self, name, time_part_func=None):
+    def _counter_key(self, name: str, time_part_func: Optional[Union[type, Callable]] = None) -> str:
         time_part = time_part_func() if time_part_func else self.__local_ymd(format='%Y%m%d')
         return '{0}counter:{1}:{2}'.format(KEY_PREFIX, name, time_part)
 
-    def counter(self, name, amount=1, limit=None, ex=True, time=86400, time_part_func=None):
+    def counter(self, name: str, amount: int = 1, limit: Optional[int] = None, ex: bool = True, time: int = 86400, time_part_func: Optional[Union[type, Callable]] = None) -> Tuple[int, int, int]:
         """
         Counter, default ``daily``.
         """
@@ -893,40 +903,40 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return amount, pre_amount, amount - pre_amount
 
     # Verification Codes Section
-    def __black_list(self, value, cate='phone'):
+    def __black_list(self, value: str, cate: str = 'phone') -> Union[Awaitable[bool], bool]:
         black_key = '{0}vcode:{1}:black:list'.format(KEY_PREFIX, cate)
         return self.sismember(black_key, value)
 
-    def __vcode_key(self, phone):
+    def __vcode_key(self, phone: str) -> str:
         return '{0}vcode:{1}'.format(KEY_PREFIX, phone)
 
-    def __quota_key(self, value, cate='phone'):
+    def __quota_key(self, value: str, cate: str = 'phone') -> str:
         return '{0}vcode:{1}:quota:{2}'.format(KEY_PREFIX, cate, value)
 
-    def __quota_incr(self, value, cate='phone', quota=10):
+    def __quota_incr(self, value: str, cate: str = 'phone', quota: int = 10) -> bool:
         return self.__quota(self.__quota_key(value, cate=cate), amount=quota, time=86400)
 
-    def __quota_num(self, value, cate='phone'):
+    def __quota_num(self, value: str, cate: str = 'phone') -> int:
         return int(self.get(self.__quota_key(value, cate=cate)) or 0)
 
-    def __quota_delete(self, value, cate='phone'):
+    def __quota_delete(self, value: str, cate: str = 'phone') -> ResponseT:
         return self.delete(self.__quota_key(value, cate=cate))
 
-    def __req_stamp_key(self, value, cate='phone'):
+    def __req_stamp_key(self, value: str, cate: str = 'phone') -> str:
         return '{0}vcode:{1}:req:stamp:{2}'.format(KEY_PREFIX, cate, value)
 
-    def __req_stamp_delete(self, value, cate='phone'):
+    def __req_stamp_delete(self, value: str, cate: str = 'phone') -> ResponseT:
         return self.delete(self.__req_stamp_key(value, cate=cate))
 
-    def __black_list_key(self, cate='phone'):
+    def __black_list_key(self, cate: str = 'phone') -> str:
         return '{0}vcode:{1}:black:list'.format(KEY_PREFIX, cate)
 
-    def __final_code(self, code, ignore_blank=True):
+    def __final_code(self, code: str, ignore_blank: bool = True) -> str:
         final_code = code or ''
         final_code = (final_code.replace(' ', '') if ignore_blank else final_code).lower()
         return final_code
 
-    def __req_interval(self, value, cate='phone', req_interval=60):
+    def __req_interval(self, value: str, cate: str = 'phone', req_interval: int = 60) -> bool:
         curstamp = tc.utc_timestamp(ms=False)
         laststamp = int(self.getset(self.__req_stamp_key(value, cate=cate), curstamp) or 0)
         if curstamp - laststamp < req_interval:
@@ -934,7 +944,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             return True
         return False
 
-    def vcode(self, phone, ipaddr=None, quota=10, req_interval=60, black_list=True, ndigits=6, time=1800, code_cast_func=str):
+    def vcode(self, phone: str, ipaddr: Optional[str] = None, quota: int = 10, req_interval: int = 60, black_list: bool = True, ndigits: int = 6, time: int = 1800, code_cast_func: Union[type, Callable] = str) -> Tuple[Union[str, bool, None], Optional[bool], Optional[bool]]:
         """
         Generate verification code if not reach quota. Return a 3-item tuple: (Verification code, Whether reach quota or not, Whether in black list or not).
 
@@ -977,14 +987,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.__quota_delete(phone, cate='exists')
         return code, False, False
 
-    def vcode_quota(self, phone=None, ipaddr=None):
+    def vcode_quota(self, phone: Optional[str] = None, ipaddr: Optional[str] = None) -> Union[int, Tuple[int]]:
         if phone and not ipaddr:
             return self.__quota_num(phone, cate='phone')
         if not phone and ipaddr:
             return self.__quota_num(ipaddr, cate='ipaddr')
         return self.__quota_num(phone, cate='phone'), self.__quota_num(ipaddr, cate='ipaddr')
 
-    def vcode_exists(self, phone, code, ipaddr=None, keep=False, quota=3, ignore_blank=True):
+    def vcode_exists(self, phone: str, code: str, ipaddr: Optional[str] = None, keep: bool = False, quota: int = 3, ignore_blank: bool = True) -> bool:
         """
         Check verification code exists or not.
         """
@@ -998,55 +1008,55 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             self.vcode_delete(phone)
         return exists
 
-    def vcode_delete(self, phone):
+    def vcode_delete(self, phone: str) -> ResponseT:
         """
         Delete verification code.
         """
         return self.delete(self.__vcode_key(phone))
 
     # Graphic Verification Codes Section
-    def __gvcode_str(self):
+    def __gvcode_str(self) -> str:
         b64str, vcode = gvcode.base64()
         return json.dumps({
             'b64str': b64str,
             'vcode': vcode,
         })
 
-    def _gvcode_key(self):
+    def _gvcode_key(self) -> str:
         return '{0}graphic:vcode'.format(KEY_PREFIX)
 
-    def __gvcode_key(self, name):
+    def __gvcode_key(self, name: str) -> str:
         return '{0}graphic:vcode:{1}'.format(KEY_PREFIX, name)
 
-    def gvcode_add(self, num=10):
+    def gvcode_add(self, num: int = 10) -> ResponseIntT:
         if num <= 0:
             raise ValueError('The num argument should be positive')
         gvcodes = (self.__gvcode_str() for _ in range(num))
         return self.sadd(self._gvcode_key(), *gvcodes)
 
-    def gvcode_initial(self, num=10):
+    def gvcode_initial(self, num: int = 10) -> ResponseIntT:
         return self.gvcode_add(num=num)
 
-    def __gvcode_cut_num(self, num=10):
+    def __gvcode_cut_num(self, num: int = 10) -> int:
         # Prevent completely spopped
         pre_num = self.scard(self._gvcode_key())
         return max(pre_num - 1, 0) if num >= pre_num else num
 
-    def gvcode_cut(self, num=10):
+    def gvcode_cut(self, num: int = 10) -> int:
         if num <= 0:
             raise ValueError('The num argument should be positive')
         return self.multi_spop(self._gvcode_key(), num=self.__gvcode_cut_num(num=num))[-1]
 
-    def gvcode_refresh(self, num=10):
+    def gvcode_refresh(self, num: int = 10) -> int:
         if num <= 0:
             raise ValueError('The num argument should be positive')
         cut_num = self.__gvcode_cut_num(num=num)
         return cut_num and self.gvcode_cut(num=cut_num), self.gvcode_add(num=num)
 
-    def __gvcode_b64str(self):
+    def __gvcode_b64str(self) -> Dict[str, Any]:
         return json.loads(self.srandmember(self._gvcode_key()) or '{}')
 
-    def gvcode_b64str(self, name, time=1800, data_uri_scheme=False):
+    def gvcode_b64str(self, name: str, time: int = 1800, data_uri_scheme: bool = False) -> str:
         gvcode = self.__gvcode_b64str()
         if not gvcode:
             self.gvcode_refresh()
@@ -1057,14 +1067,14 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.setex(self.__gvcode_key(name), time, vcode)
         return '{0}{1}'.format('data:image/png;base64,' if data_uri_scheme else '', cc.Convert2Utf8(b64str))
 
-    def gvcode_exists(self, name, code, ignore_blank=True):
+    def gvcode_exists(self, name: str, code: str, ignore_blank: bool = True) -> bool:
         return (self.get(self.__gvcode_key(name)) or '').lower() == self.__final_code(code, ignore_blank=ignore_blank)
 
     # Delay Tasks Section
-    def __queue_key(self, queue):
+    def __queue_key(self, queue: str) -> str:
         return '{0}queue:{1}'.format(KEY_PREFIX, queue)
 
-    def execute_later(self, queue, name, args=None, delayed=KEY_PREFIX + 'delayed:default', delay=0, short_uuid=False, enable_queue=False):
+    def execute_later(self, queue: str, name: str, args: Dict[str, Any] = None, delayed: str = KEY_PREFIX + 'delayed:default', delay: int = 0, short_uuid: bool = False, enable_queue: bool = False) -> str:
         """
         Producer of delay execute.
         """
@@ -1077,7 +1087,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
                 self.rpush(self.__queue_key(queue), item)
         return identifier
 
-    def __callable_func(self, f):
+    def __callable_func(self, f: Union[str, Callable]) -> Optional[Callable]:
         if callable(f):
             return f
         try:
@@ -1088,7 +1098,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             logger.error(e)
             return None
 
-    def release_poll_queue_lock(self, delayed, final_logger=None):
+    def release_poll_queue_lock(self, delayed: str, final_logger: Optional[logging.Logger] = None) -> ResponseT:
         if not delayed:
             return
         item = self.zrange(delayed, 0, 0, withscores=True)
@@ -1099,7 +1109,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         final_logger.info('  * Release lock: {0}'.format(identifier))
         return self.delete_lock(identifier)
 
-    def __release_lock_when_launch(self, release_lock_when_launch, release_lock_eth0_inet_addr, final_process_lock_key, delayed, final_logger):
+    def __release_lock_when_launch(self, release_lock_when_launch: bool, release_lock_eth0_inet_addr: Optional[str], final_process_lock_key: str, delayed: str, final_logger: Optional[logging.Logger]):
         if not release_lock_when_launch:
             return
         if not release_lock_eth0_inet_addr:
@@ -1116,7 +1126,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.release_poll_queue_lock(delayed, final_logger=final_logger)
         final_logger.info('>>> Release item lock end')
 
-    def poll_queue(self, callbacks={}, delayed=KEY_PREFIX + 'delayed:default', enable_auto_zrem=False, enable_queue=False, enable_process_lock=False, process_lock_key=None, release_lock_when_launch=True, release_lock_eth0_inet_addr=None, release_lock_when_error=True, delayed_logger=None, unlocked_warning_func=None):
+    def poll_queue(self, callbacks: Dict[str, Callable] = {}, delayed: str = KEY_PREFIX + 'delayed:default', enable_auto_zrem: bool = False, enable_queue: bool = False, enable_process_lock: bool = False, process_lock_key: Optional[str] = None, release_lock_when_launch: bool = True, release_lock_eth0_inet_addr: Optional[str] = None, release_lock_when_error: bool = True, delayed_logger: Optional[logging.Logger] = None, unlocked_warning_func: Optional[Callable] = None):
         """
         Consumer of delay execute.
 
@@ -1205,7 +1215,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
             self.release_lock(identifier, item_lock)
 
     # HotKey Section
-    def hotkey(self, gfunc=None, gargs=None, gkwargs=None, sfunc=None, sargs=None, skwargs=None, update_timeout=1000, short_uuid=False):
+    def hotkey(self, gfunc: Optional[Callable] = None, gargs: Optional[Dict[str, Any]] = None, gkwargs: Optional[Dict[str, Any]] = None, sfunc: Optional[Callable] = None, sargs: Optional[Dict[str, Any]] = None, skwargs: Optional[Dict[str, Any]] = None, update_timeout: int = 1000, short_uuid: bool = False):
         data = gfunc and gfunc(*(gargs or ()), **(gkwargs or {}))
         if not data:
             name = self.__uuid(short_uuid)
@@ -1223,10 +1233,10 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         return data
 
     # For rename official function
-    def georem(self, name, *values):
+    def georem(self, name: KeyT, *values: FieldT) -> ResponseT:
         return self.zrem(name, *values)
 
-    def geomembers(self, name, start=0, end=-1, desc=False, withscores=False, score_cast_func=float):
+    def geomembers(self, name: KeyT, start: int = 0, end: int = -1, desc: bool = False, withscores: bool = False, score_cast_func: Union[type, Callable] = float) -> ResponseT:
         """
         zrange(name, 0, -1) == georadius(name, 0, 0, '+inf', unit='m')
         """
