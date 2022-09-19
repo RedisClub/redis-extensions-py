@@ -75,6 +75,8 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         super(StrictRedisExtensions, self).__init__(*args, **kwargs)
 
     def __str(self, x):
+        if isinstance(x, int):
+            return str(x)
         return x if isinstance(x, basestring) else bytes(x)
 
     def __local_ymd(self, format='%Y-%m-%d'):
