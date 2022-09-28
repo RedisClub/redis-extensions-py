@@ -9,7 +9,8 @@ setup(
     version=version,
     keywords='Redis Extensions',
     description='Redis-extensions is a collection of custom extensions for Redis-py.',
-    long_description=open('README.rst').read(),
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
 
     url='https://github.com/redisclub/redis-extensions-py',
 
