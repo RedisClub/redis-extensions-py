@@ -30,6 +30,7 @@ ResponseStrT = Union[Awaitable[str], str]
 ResponseBoolT = Union[Awaitable[bool], bool]
 ResponseListT = Union[Awaitable[list], list]
 ResponseZ = Union[List[str], List[Tuple[str, float]]]
+ResponseJSON = Union[List, Dict[str, Any]]
 
 
 logger = logging.getLogger('redis_extensions')
@@ -685,8 +686,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         """
         return self.setnx(name, json.dumps(value, **self.__json_params(cls, json_params)))
 
-    def get_json(self, name: str, default: str = '{}') -> Dict[str, Any]:
+    def get_json(self, name: str, default: str = '{}') -> ResponseJSON:
         return json.loads(self.get(name) or default)
+
+    def get_list(self, name: str) -> List:
+        return self.get_json(name, default='[]')
 
     def hset_json(self, name: str, key: Optional[str] = None, value: Optional[EncodableT] = None, mapping: Optional[dict] = None, items: Optional[list] = None, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None) -> ResponseIntT:
         if key is None and not mapping and not items:
@@ -1346,10 +1350,11 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     hvalsstr = hvals_str
     hgetallstr = hgetall_str
     # JSON
-    setjson = set_json
-    setexjson = setex_json
-    setnxjson = setnx_json
+    setlist = set_list = setjson = set_json
+    setexlist = setex_list = setexjson = setex_json
+    setnxlist = setnx_list = setnxjson = setnx_json
     getjson = get_json
+    getlist = get_list
     hsetjson = hset_json
     hsetnxjson = hsetnx_json
     hmsetjson = hmset_json

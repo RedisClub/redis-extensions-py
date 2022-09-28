@@ -502,6 +502,12 @@ class TestRedisExtensionsCommands(object):
         r.set_json('a', j)
         assert r.get_json('a') == j
 
+    def test_get_list(self, r):
+        assert r.get_list('a') == []
+        j = ['a', 'b', 'c']
+        r.set_list('a', j)
+        assert r.get_list('a') == j
+
     def test_hset_json(self, r):
         r.hset_json('a', 'a', {'a': 1})
         assert r.hget('a', 'a') == '{"a": 1}'
