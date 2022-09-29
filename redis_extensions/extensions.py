@@ -719,12 +719,18 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         mapping = {k: json.dumps(v, **self.__json_params(cls, json_params)) for (k, v) in mapping.items()}
         return self.hmset(name, mapping)
 
-    def hget_json(self, name: str, key: str, default: str = '{}') -> Dict[str, Any]:
+    def hget_json(self, name: str, key: str, default: str = '{}') -> ResponseJSON:
         return json.loads(self.hget(name, key) or default)
 
-    def hmget_json(self, name: str, keys: List, default: str = '{}', *args: List) -> List[Dict[str, Any]]:
+    def hget_list(self, name: str, key: str) -> List:
+        return self.hget_json(name, key, default='[]')
+
+    def hmget_json(self, name: str, keys: List, default: str = '{}', *args: List) -> List[ResponseJSON]:
         vals = self.hmget(name, keys, *args)
         return [json.loads(v or default) for v in vals]
+
+    def hmget_list(self, name: str, keys: List, *args: List) -> List[List]:
+        return self.hmget_json(name, keys, default='[]', *args)
 
     def hvals_json(self, name: str, default: str = '{}') -> List[Dict[str, Any]]:
         vals = self.hvals(name)
@@ -1350,15 +1356,16 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     hvalsstr = hvals_str
     hgetallstr = hgetall_str
     # JSON
-    setlist = set_list = setjson = set_json
-    setexlist = setex_list = setexjson = setex_json
-    setnxlist = setnx_list = setnxjson = setnx_json
+    setlist = set_list = setdict = set_dict = setjson = set_json
+    setexlist = setex_list = setexdict = setex_dict = setexjson = setex_json
+    setnxlist = setnx_list = setnxdict = setnx_dict = setnxjson = setnx_json
     getjson = get_json
     getlist = get_list
-    hsetjson = hset_json
-    hsetnxjson = hsetnx_json
-    hmsetjson = hmset_json
+    hsetlist = hset_list = hsetdict = hset_dict = hsetjson = hset_json
+    hsetnxlist = hsetnx_list = hsetnxdict = hsetnx_dict = hsetnxjson = hsetnx_json
+    hmsetlist = hmset_list = hmsetdict = hmset_dict = hmsetjson = hmset_json
     hgetjson = hget_json
+    hgetlist = hget_list
     hmgetjson = hmget_json
     hvalsjson = hvals_json
     hgetalljson = hgetall_json

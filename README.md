@@ -1,5 +1,5 @@
 # redis-extensions
-Redis-extensions is a collection of custom extensions for Redis-py 3.x+.
+Redis-extensions is a collection of custom extensions for Redis-py.
 
 ## Installation
 ```
