@@ -732,13 +732,19 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     def hmget_list(self, name: str, keys: List, *args: List) -> List[List]:
         return self.hmget_json(name, keys, default='[]', *args)
 
-    def hvals_json(self, name: str, default: str = '{}') -> List[Dict[str, Any]]:
+    def hvals_json(self, name: str, default: str = '{}') -> List[ResponseJSON]:
         vals = self.hvals(name)
         return [json.loads(v or default) for v in vals]
+
+    def hvals_list(self, name: str) -> List[List]:
+        return self.hvals_json(name, default='[]')
 
     def hgetall_json(self, name: str, default: str = '{}') -> Dict[str, Any]:
         kvs = self.hgetall(name)
         return {k: json.loads(v or default) for (k, v) in kvs.items()}
+
+    def hgetall_list(self, name: str) -> Dict[str, Any]:
+        return self.hgetall_json(name, default='[]')
 
     def lpush_json(self, name: str, value: EncodableT, cls: Optional[Type[json.JSONDecoder]] = None, json_params: Dict[str, Any] = None):
         return self.lpush(name, json.dumps(value, **self.__json_params(cls, json_params)))
@@ -1359,16 +1365,19 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     setlist = set_list = setdict = set_dict = setjson = set_json
     setexlist = setex_list = setexdict = setex_dict = setexjson = setex_json
     setnxlist = setnx_list = setnxdict = setnx_dict = setnxjson = setnx_json
-    getjson = get_json
+    getdict = get_dict = getjson = get_json
     getlist = get_list
     hsetlist = hset_list = hsetdict = hset_dict = hsetjson = hset_json
     hsetnxlist = hsetnx_list = hsetnxdict = hsetnx_dict = hsetnxjson = hsetnx_json
     hmsetlist = hmset_list = hmsetdict = hmset_dict = hmsetjson = hmset_json
-    hgetjson = hget_json
+    hgetdict = hget_dict = hgetjson = hget_json
     hgetlist = hget_list
-    hmgetjson = hmget_json
-    hvalsjson = hvals_json
-    hgetalljson = hgetall_json
+    hmgetdict = hmget_dict = hmgetjson = hmget_json
+    hmgetlist = hmget_list
+    hvalsdict = hvals_dict = hvalsjson = hvals_json
+    hvalslist = hvals_list
+    hgetalldict = hgetall_dict = hgetalljson = hgetall_json
+    hgetalllist = hgetall_list
 
     lpushjson = pushjson = push_json = lpush_json
     rpushjson = rpush_json

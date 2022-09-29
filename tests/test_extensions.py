@@ -544,6 +544,40 @@ class TestRedisExtensionsCommands(object):
         r.hset_list('a', mapping=j)
         assert r.hmget_list('a', ['a', 'b']) == list(j.values())
 
+    def test_hvals_json(self, r):
+        j = {
+            'a': {'a': 1},
+            'b': {'b': 2},
+        }
+        r.hset_json('a', mapping=j)
+        assert r.hvals_json('a') == list(j.values())
+
+    def test_hvals_list(self, r):
+        assert r.hvals_list('a') == []
+        j = {
+            'a': {'a': 1},
+            'b': {'b': 2},
+        }
+        r.hset_list('a', mapping=j)
+        assert r.hvals_list('a') == list(j.values())
+
+    def test_hgetall_json(self, r):
+        j = {
+            'a': {'a': 1},
+            'b': {'b': 2},
+        }
+        r.hset_json('a', mapping=j)
+        assert r.hgetall_json('a') == j
+
+    def test_hgetall_list(self, r):
+        assert r.hgetall_list('a') == {}
+        j = {
+            'a': {'a': 1},
+            'b': {'b': 2},
+        }
+        r.hset_list('a', mapping=j)
+        assert r.hgetall_list('a') == j
+
     def test_lpush_json(self, r):
         j = {'a': 1}
         r.lpush_json('a', j)
