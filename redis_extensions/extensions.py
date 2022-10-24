@@ -1213,10 +1213,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``release_lock_eth0_inet_addr`` indicates eth0 inet addr, which can release lock when ``release_lock_when_launch``.
 
-        ``release_lock_key`` indicates acquire lock key when ``release_lock_when_launch``.
-
-        ``release_lock_key_expire`` indicates expire time of ``release_lock_key``.
-
         ``release_lock_when_error`` indicates whether release lock when error or not.
         """
         callbacks = {k: self.__callable_func(v) for k, v in callbacks.items()}
