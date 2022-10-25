@@ -398,6 +398,18 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.release_lock(name, locked)
         return item
 
+    def blpopv(self, keys: List, timeout: Optional[int] = 0) -> ResponseListT:
+        kv = self.blpop(keys, timeout)
+        if not kv:
+            return None
+        return kv[-1]
+
+    def brpopv(self, keys: List, timeout: Optional[int] = 0) -> ResponseListT:
+        kv = self.brpop(keys, timeout)
+        if not kv:
+            return None
+        return kv[-1]
+
     # Sets Section
     def delete_sadd(self, name: str, *values: FieldT) -> Tuple[ResponseIntT, ResponseT]:
         """
@@ -1336,6 +1348,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     lpushex = lpush_ex
     lrangeex = lrange_ex
     sortedpop = sorted_pop
+    bpopv = blpopv
     deletesadd = delete_sadd
     multispop = multi_spop
     srandshuffle = srandmembershuffle = srandmember_shuffle

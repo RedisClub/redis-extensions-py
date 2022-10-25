@@ -316,6 +316,20 @@ class TestRedisExtensionsCommands(object):
         # with pytest.raises(IndexError):
         #     r.sorted_pop('b', 1, sorted_func=func, reverse=False)
 
+    def test_blpopv(self, r):
+        v = r.blpopv('a', timeout=1)
+        assert v is None
+        r.rpush('a', 1)
+        v = r.blpopv('a', timeout=60)
+        assert v == '1'
+
+    def test_brpopv(self, r):
+        v = r.brpopv('a', timeout=1)
+        assert v is None
+        r.rpush('a', 1)
+        v = r.brpopv('a', timeout=60)
+        assert v == '1'
+
     # Sets Section
 
     def test_delete_sadd(self, r):
