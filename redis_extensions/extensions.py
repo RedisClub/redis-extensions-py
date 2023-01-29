@@ -41,22 +41,6 @@ KEY_PREFIX = 'r:'  # Prefix of redis-extensions used key
 WARNING_LOG = '``{0}`` used, may be very very very slow when keys\' amount very large'  # ``r.keys()`` and ``r.scan_iter()`` not support use
 
 
-POLL_QUEUE_CONTINUE_FLAG = None
-
-
-# Signal Handler
-def signalHandler(signum, frame):
-    global POLL_QUEUE_CONTINUE_FLAG
-    if POLL_QUEUE_CONTINUE_FLAG is None:
-        exit()
-    POLL_QUEUE_CONTINUE_FLAG = False
-
-
-# signal.SIGKILL, `KILL -9`, unblockable
-for signum in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM, signal.SIGTSTP]:
-    signal.signal(signum, signalHandler)
-
-
 # Get the local ip
 def get_network_ip() -> str:
     try:
@@ -81,6 +65,7 @@ class RedisExtensions(BaseRedisExpires, StrictRedis):
         self.rate = 10000000000000  # 10 ** 13,
         self.max_timestamp = 9999999999999
         self.timezone = kwargs.pop('timezone', None)
+        self.poll_queue_continue_flag = True
         tc.__init__(timezone=self.timezone)
         super(RedisExtensions, self).__init__(*args, **kwargs)
 
@@ -1208,6 +1193,10 @@ class RedisExtensions(BaseRedisExpires, StrictRedis):
         self.release_poll_queue_lock(delayed, final_logger=final_logger)
         final_logger.info('>>> Release item lock end')
 
+    # Signal Handler
+    def __signal_handler(self, signum, frame):
+        self.poll_queue_continue_flag = False
+
     def poll_queue(self, callbacks: Dict[str, Callable] = {}, delayed: str = KEY_PREFIX + 'delayed:default', enable_auto_zrem: bool = False, enable_queue: bool = False, enable_process_lock: bool = False, process_lock_key: Optional[str] = None, release_lock_when_launch: bool = True, release_lock_eth0_inet_addr: Optional[str] = None, release_lock_when_error: bool = True, delayed_logger: Optional[logging.Logger] = None, unlocked_warning_func: Optional[Callable] = None):
         """
         Consumer of delay execute.
@@ -1228,8 +1217,9 @@ class RedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``release_lock_when_error`` indicates whether release lock when error or not.
         """
-        global POLL_QUEUE_CONTINUE_FLAG
-        POLL_QUEUE_CONTINUE_FLAG = True
+        # signal.SIGKILL, `KILL -9`, unblockable
+        for signum in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM, signal.SIGTSTP]:
+            signal.signal(signum, self.__signal_handler)
 
         callbacks = {k: self.__callable_func(v) for k, v in callbacks.items()}
         callbacks = {k: v for k, v in callbacks.items() if v}
@@ -1244,7 +1234,7 @@ class RedisExtensions(BaseRedisExpires, StrictRedis):
         self.__release_lock_when_launch(release_lock_when_launch, release_lock_eth0_inet_addr, final_process_lock_key, delayed, final_logger)
 
         process_lock = None
-        while POLL_QUEUE_CONTINUE_FLAG:
+        while self.poll_queue_continue_flag:
             if enable_process_lock:
                 # Release process lock
                 if process_lock:
