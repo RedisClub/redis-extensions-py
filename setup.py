@@ -19,7 +19,6 @@ setup(
 
     packages=['redis_extensions'],
     py_modules=[],
-    python_requires='>=3.7',
     install_requires=['TimeConvert', 'redis>=4.0.2', 'shortuuid'],
 
     classifiers=[
