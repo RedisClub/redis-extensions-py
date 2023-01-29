@@ -17,7 +17,7 @@ setup(
     author='Hackathon',
     author_email='kimi.huang@brightcells.com',
 
-    packages=['redis_extensions_base'],
+    packages=['redis_extensions'],
     py_modules=[],
     python_requires='>=3.7',
     install_requires=['TimeConvert', 'redis>=4.0.2', 'shortuuid'],
