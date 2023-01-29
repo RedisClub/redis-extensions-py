@@ -12,7 +12,7 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
 
-    url='https://github.com/redisclub/redis-extensions-base-py',
+    url='https://github.com/RedisClub/redis-extensions-py/tree/base+redis4.x',
 
     author='Hackathon',
     author_email='kimi.huang@brightcells.com',
