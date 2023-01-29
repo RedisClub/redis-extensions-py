@@ -46,7 +46,7 @@ POLL_QUEUE_CONTINUE_FLAG = None
 
 
 # Signal Handler
-def sigintHandler(signum, frame):
+def signalHandler(signum, frame):
     global POLL_QUEUE_CONTINUE_FLAG
     if POLL_QUEUE_CONTINUE_FLAG is None:
         exit()
@@ -55,7 +55,7 @@ def sigintHandler(signum, frame):
 
 # signal.SIGKILL, `KILL -9`, unblockable
 for signum in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM, signal.SIGTSTP]:
-    signal.signal(signum, sigintHandler)
+    signal.signal(signum, signalHandler)
 
 
 # Get the local ip
