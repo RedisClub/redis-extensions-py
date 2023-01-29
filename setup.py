@@ -1,7 +1,7 @@
 from setuptools import setup
 
 
-version = '4.1.5'
+version = '4.1.6'
 
 
 setup(
