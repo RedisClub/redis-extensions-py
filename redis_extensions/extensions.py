@@ -14,7 +14,6 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, 
 import gvcode
 import shortuuid
 import vcode as mod_vcode
-from CodeConvert import CodeConvert as cc
 from redis import StrictRedis
 from redis.client import bool_ok
 from redis.exceptions import DataError, ResponseError, WatchError
@@ -1148,7 +1147,7 @@ class RedisExtensions(BaseRedisExpires, StrictRedis):
                 logger.warning('Gvcode not found, exec gvcode_add or gvcode_refresh first')
         b64str, vcode = gvcode.get('b64str', ''), gvcode.get('vcode', '')
         self.setex(self.__gvcode_key(name), time, vcode)
-        return '{0}{1}'.format('data:image/png;base64,' if data_uri_scheme else '', cc.Convert2Utf8(b64str))
+        return '{0}{1}'.format('data:image/png;base64,' if data_uri_scheme else '', b64str)
 
     def gvcode_exists(self, name: str, code: str, ignore_blank: bool = True) -> bool:
         return (self.get(self.__gvcode_key(name)) or '').lower() == self.__final_code(code, ignore_blank=ignore_blank)
