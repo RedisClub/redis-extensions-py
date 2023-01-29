@@ -42,12 +42,14 @@ KEY_PREFIX = 'r:'  # Prefix of redis-extensions used key
 WARNING_LOG = '``{0}`` used, may be very very very slow when keys\' amount very large'  # ``r.keys()`` and ``r.scan_iter()`` not support use
 
 
-POLL_QUEUE_CONTINUE_FLAG = True
+POLL_QUEUE_CONTINUE_FLAG = None
 
 
 # Signal Handler
 def sigintHandler(signum, frame):
     global POLL_QUEUE_CONTINUE_FLAG
+    if POLL_QUEUE_CONTINUE_FLAG is None:
+        exit()
     POLL_QUEUE_CONTINUE_FLAG = False
 
 
@@ -1227,6 +1229,9 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
 
         ``release_lock_when_error`` indicates whether release lock when error or not.
         """
+        global POLL_QUEUE_CONTINUE_FLAG
+        POLL_QUEUE_CONTINUE_FLAG = True
+
         callbacks = {k: self.__callable_func(v) for k, v in callbacks.items()}
         callbacks = {k: v for k, v in callbacks.items() if v}
 
