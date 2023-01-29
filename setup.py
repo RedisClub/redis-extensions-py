@@ -5,22 +5,22 @@ version = '4.1.3'
 
 
 setup(
-    name='redis-extensions',
+    name='redis-extensions-base',
     version=version,
-    keywords='Redis Extensions',
-    description='Redis-extensions is a collection of custom extensions for Redis-py.',
+    keywords='Redis Extensions Base',
+    description='Redis-extensions-base is a base collection of custom extensions for Redis-py.',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
 
-    url='https://github.com/redisclub/redis-extensions-py',
+    url='https://github.com/redisclub/redis-extensions-base-py',
 
     author='Hackathon',
     author_email='kimi.huang@brightcells.com',
 
-    packages=['redis_extensions'],
+    packages=['redis_extensions_base'],
     py_modules=[],
     python_requires='>=3.7',
-    install_requires=['TimeConvert', 'redis>=4.0.2', 'shortuuid', 'verification-code', 'graphic-verification-code>=1.0.3'],
+    install_requires=['TimeConvert', 'redis>=4.0.2', 'shortuuid'],
 
     classifiers=[
         "License :: OSI Approved :: BSD License",

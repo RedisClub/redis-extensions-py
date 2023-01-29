@@ -11,9 +11,7 @@ import uuid
 import warnings
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
-import gvcode
 import shortuuid
-import vcode as mod_vcode
 from redis import StrictRedis
 from redis.client import bool_ok
 from redis.exceptions import DataError, ResponseError, WatchError
@@ -969,174 +967,6 @@ class RedisExtensions(BaseRedisExpires, StrictRedis):
             self.expire(name, time)
         return amount, pre_amount, amount - pre_amount
 
-    # Verification Codes Section
-    def __black_list(self, value: str, cate: str = 'phone') -> Union[Awaitable[bool], bool]:
-        black_key = '{0}vcode:{1}:black:list'.format(KEY_PREFIX, cate)
-        return self.sismember(black_key, value)
-
-    def __vcode_key(self, phone: str) -> str:
-        return '{0}vcode:{1}'.format(KEY_PREFIX, phone)
-
-    def __quota_key(self, value: str, cate: str = 'phone') -> str:
-        return '{0}vcode:{1}:quota:{2}'.format(KEY_PREFIX, cate, value)
-
-    def __quota_incr(self, value: str, cate: str = 'phone', quota: int = 10) -> bool:
-        return self.__quota(self.__quota_key(value, cate=cate), amount=quota, time=86400)
-
-    def __quota_num(self, value: str, cate: str = 'phone') -> int:
-        return int(self.get(self.__quota_key(value, cate=cate)) or 0)
-
-    def __quota_delete(self, value: str, cate: str = 'phone') -> ResponseT:
-        return self.delete(self.__quota_key(value, cate=cate))
-
-    def __req_stamp_key(self, value: str, cate: str = 'phone') -> str:
-        return '{0}vcode:{1}:req:stamp:{2}'.format(KEY_PREFIX, cate, value)
-
-    def __req_stamp_delete(self, value: str, cate: str = 'phone') -> ResponseT:
-        return self.delete(self.__req_stamp_key(value, cate=cate))
-
-    def __black_list_key(self, cate: str = 'phone') -> str:
-        return '{0}vcode:{1}:black:list'.format(KEY_PREFIX, cate)
-
-    def __final_code(self, code: str, ignore_blank: bool = True) -> str:
-        final_code = code or ''
-        final_code = (final_code.replace(' ', '') if ignore_blank else final_code).lower()
-        return final_code
-
-    def __req_interval(self, value: str, cate: str = 'phone', req_interval: int = 60) -> bool:
-        curstamp = tc.utc_timestamp(ms=False)
-        laststamp = int(self.getset(self.__req_stamp_key(value, cate=cate), curstamp) or 0)
-        if curstamp - laststamp < req_interval:
-            self.sadd(self.__black_list_key(cate=cate), value)
-            return True
-        return False
-
-    def vcode(self, phone: str, ipaddr: Optional[str] = None, quota: int = 10, req_interval: int = 60, black_list: bool = True, ndigits: int = 6, time: int = 1800, code_cast_func: Union[type, Callable] = str) -> Tuple[Union[str, bool, None], Optional[bool], Optional[bool]]:
-        """
-        Generate verification code if not reach quota. Return a 3-item tuple: (Verification code, Whether reach quota or not, Whether in black list or not).
-
-        ``quota`` indicates limitation of generating code, ``phone`` and ``ipaddr`` use in common, 0 for limitlessness.
-
-        ``req_interval`` indicates interval of two request, ``phone`` and ``ipaddr`` use in common, 0 for limitlessness.
-
-        ``black_list`` indicates whether check black list or not.
-
-        ``ndigits`` indicates length of generated code.
-
-        ``time`` indicates expire time of generating code, which can be represented by an integer or a Python timedelta object, Default: 30 minutes.
-
-        ``code_cast_func`` a callable used to cast the code return value.
-
-        ``black_list`` - ``redis:extensions:vcode:phone:black:list`` & ``redis:extensions:vcode:ipaddr:black:list``
-        """
-        # Black List Check
-        if black_list and (self.__black_list(phone, cate='phone') or (ipaddr and self.__black_list(ipaddr, cate='ipaddr'))):
-            return None, None, True
-        # Quota Check
-        if quota:
-            # Phone Quota
-            if self.__quota_incr(phone, cate='phone', quota=quota):
-                return None, True, None
-            # Ipaddr Quota If `ipaddr`` Isn't ``None``
-            if ipaddr and self.__quota_incr(ipaddr, cate='ipaddr', quota=quota):
-                return None, True, None
-        # Req Interval Check
-        if req_interval:
-            # Phone Interval
-            if self.__req_interval(phone, cate='phone', req_interval=req_interval):
-                return None, False, True
-            # Ipaddr Interval If `ipaddr`` Isn't ``None``
-            if ipaddr and self.__req_interval(ipaddr, cate='ipaddr', req_interval=req_interval):
-                return None, False, True
-        code = mod_vcode.digits(ndigits=ndigits, code_cast_func=code_cast_func)
-        self.setex(self.__vcode_key(phone), time, code)
-        # Delete vcode exists quota key
-        self.__quota_delete(phone, cate='exists')
-        return code, False, False
-
-    def vcode_quota(self, phone: Optional[str] = None, ipaddr: Optional[str] = None) -> Union[int, Tuple[int]]:
-        if phone and not ipaddr:
-            return self.__quota_num(phone, cate='phone')
-        if not phone and ipaddr:
-            return self.__quota_num(ipaddr, cate='ipaddr')
-        return self.__quota_num(phone, cate='phone'), self.__quota_num(ipaddr, cate='ipaddr')
-
-    def vcode_exists(self, phone: str, code: str, ipaddr: Optional[str] = None, keep: bool = False, quota: int = 3, ignore_blank: bool = True) -> bool:
-        """
-        Check verification code exists or not.
-        """
-        exists = self.get(self.__vcode_key(phone)) == self.__final_code(self.__str(code), ignore_blank=ignore_blank)
-        # Delete req stamp when vcode exists
-        if exists:
-            self.__req_stamp_delete(phone, cate='phone')
-            ipaddr and self.__req_stamp_delete(ipaddr, cate='ipaddr')
-        # Deleted when exists or not quota(default 3) times in a row
-        if not keep and (exists or self.__quota_incr(phone, cate='exists', quota=quota - 1)):
-            self.vcode_delete(phone)
-        return exists
-
-    def vcode_delete(self, phone: str) -> ResponseT:
-        """
-        Delete verification code.
-        """
-        return self.delete(self.__vcode_key(phone))
-
-    # Graphic Verification Codes Section
-    def __gvcode_str(self) -> str:
-        b64str, vcode = gvcode.base64()
-        return json.dumps({
-            'b64str': b64str,
-            'vcode': vcode,
-        })
-
-    def _gvcode_key(self) -> str:
-        return '{0}graphic:vcode'.format(KEY_PREFIX)
-
-    def __gvcode_key(self, name: str) -> str:
-        return '{0}graphic:vcode:{1}'.format(KEY_PREFIX, name)
-
-    def gvcode_add(self, num: int = 10) -> ResponseIntT:
-        if num <= 0:
-            raise ValueError('The num argument should be positive')
-        gvcodes = (self.__gvcode_str() for _ in range(num))
-        return self.sadd(self._gvcode_key(), *gvcodes)
-
-    def gvcode_initial(self, num: int = 10) -> ResponseIntT:
-        return self.gvcode_add(num=num)
-
-    def __gvcode_cut_num(self, num: int = 10) -> int:
-        # Prevent completely spopped
-        pre_num = self.scard(self._gvcode_key())
-        return max(pre_num - 1, 0) if num >= pre_num else num
-
-    def gvcode_cut(self, num: int = 10) -> int:
-        if num <= 0:
-            raise ValueError('The num argument should be positive')
-        return self.multi_spop(self._gvcode_key(), num=self.__gvcode_cut_num(num=num))[-1]
-
-    def gvcode_refresh(self, num: int = 10) -> int:
-        if num <= 0:
-            raise ValueError('The num argument should be positive')
-        cut_num = self.__gvcode_cut_num(num=num)
-        return cut_num and self.gvcode_cut(num=cut_num), self.gvcode_add(num=num)
-
-    def __gvcode_b64str(self) -> Dict[str, Any]:
-        return json.loads(self.srandmember(self._gvcode_key()) or '{}')
-
-    def gvcode_b64str(self, name: str, time: int = 1800, data_uri_scheme: bool = False) -> str:
-        gvcode = self.__gvcode_b64str()
-        if not gvcode:
-            self.gvcode_refresh()
-            gvcode = self.__gvcode_b64str()
-            if not gvcode:
-                logger.warning('Gvcode not found, exec gvcode_add or gvcode_refresh first')
-        b64str, vcode = gvcode.get('b64str', ''), gvcode.get('vcode', '')
-        self.setex(self.__gvcode_key(name), time, vcode)
-        return '{0}{1}'.format('data:image/png;base64,' if data_uri_scheme else '', b64str)
-
-    def gvcode_exists(self, name: str, code: str, ignore_blank: bool = True) -> bool:
-        return (self.get(self.__gvcode_key(name)) or '').lower() == self.__final_code(code, ignore_blank=ignore_blank)
-
     # Delay Tasks Section
     def __queue_key(self, queue: str) -> str:
         return '{0}queue:{1}'.format(KEY_PREFIX, queue)
@@ -1400,7 +1230,6 @@ class RedisExtensions(BaseRedisExpires, StrictRedis):
     # For backwards compatibility
     zgte = zge
     zlte = zle
-    vcode_status = vcode_exists
     lock_exists = exists_lock
 
     # Delete => Del
@@ -1413,4 +1242,4 @@ class RedisExtensions(BaseRedisExpires, StrictRedis):
     delsadd = del_sadd = delete_sadd
 
 
-StrictRedisExtensions = RedisExtensions
+BaseStrictRedisExtensions = StrictRedisExtensions = BaseRedisExtensions = RedisExtensions
