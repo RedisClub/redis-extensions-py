@@ -10,7 +10,7 @@ pip install redis-extensions-base
 ```python
 In [1]: import redis_extensions as redis
 
-In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+In [2]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
 In [3]: r.zaddwithstamps('sorted_set', 1, 'a', 2, 'b')
 Out[3]: 1
@@ -46,7 +46,7 @@ In [3]:
 
 In [3]: import redis_extensions as redis
 
-In [4]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+In [4]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
 In [5]: r.REDIS_EXPIRED
 r.REDIS_EXPIRED_HALF_HOUR  r.REDIS_EXPIRED_ONE_HOUR   r.REDIS_EXPIRED_ONE_WEEK
@@ -60,7 +60,7 @@ Out[5]: 3600
 ```python
 In [1]: import redis_extensions as redis
 
-In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+In [2]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
 In [3]: r.delete_keys('redis_extensions')
 ``r.keys()`` used, may be very very very slow when keys' amount very large
@@ -76,7 +76,7 @@ Out[4]: []
   ```python
   In [1]: import redis_extensions as redis
 
-  In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+  In [2]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
   In [3]: r.acquire_lock('redis_extensions')
   Out[3]: '026ad2a7-2b58-435f-8ba2-467458a687f1'
@@ -103,7 +103,7 @@ Out[4]: []
   ```python
   In [1]: import redis_extensions as redis
 
-  In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+  In [2]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
   In [3]: r.quota('redis_extensions', amount=1, time=10)
   Out[3]: False
@@ -116,7 +116,7 @@ Out[4]: []
   ```python
   In [1]: import redis_extensions as redis
 
-  In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+  In [2]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
   In [3]: r.quote('http://a.com')
   Out[3]: '6eb19fa3-9e26-457b-bb88-83ea5927ac29'
@@ -129,7 +129,7 @@ Out[4]: []
   ```python
   In [1]: import redis_extensions as redis
 
-  In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+  In [2]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
   In [3]: phone = '18888888888'
 
@@ -147,7 +147,7 @@ Out[4]: []
   ```python
   In [1]: import redis_extensions as redis
 
-  In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+  In [2]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
   In [3]: r.signin_status('redis_extensions')
   Out[3]:
@@ -190,7 +190,7 @@ Out[4]: []
   ```python
   In [1]: import redis_extensions as redis
 
-  In [2]: r = redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+  In [2]: r = redis.RedisExtensions(host='localhost', port=6379, db=0)
 
   In [3]: r.counter('a')
   Out[3]: (1, 0, 1)  # cur, pre, incr
