@@ -71,7 +71,7 @@ def get_network_ip() -> str:
     return ip
 
 
-class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
+class RedisExtensions(BaseRedisExpires, StrictRedis):
     """
     Extension of [redis-py](https://github.com/andymccurdy/redis-py)'s StrictRedis.
 
@@ -83,7 +83,7 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
         self.max_timestamp = 9999999999999
         self.timezone = kwargs.pop('timezone', None)
         tc.__init__(timezone=self.timezone)
-        super(StrictRedisExtensions, self).__init__(*args, **kwargs)
+        super(RedisExtensions, self).__init__(*args, **kwargs)
 
     def __str(self, x: Any) -> Union[str, bytes]:
         if isinstance(x, int):
@@ -1422,3 +1422,6 @@ class StrictRedisExtensions(BaseRedisExpires, StrictRedis):
     dellpush = del_lpush = delpush = del_push = delete_lpush
     delrpush = del_rpush = delete_rpush
     delsadd = del_sadd = delete_sadd
+
+
+StrictRedisExtensions = RedisExtensions
