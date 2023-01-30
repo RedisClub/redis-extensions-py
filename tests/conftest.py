@@ -32,22 +32,22 @@ def _get_client2(cls, request=None, **kwargs):
 @pytest.fixture()
 def r(request, **kwargs):
     """
-    redis.StrictRedisExtensions(host='localhost', port=6379, db=0)
+    redis.RedisExtensions(host='localhost', port=6379, db=0)
     """
-    return _get_client(redis.StrictRedisExtensions, request, **dict(kwargs, **{'decode_responses': True}))
+    return _get_client(redis.RedisExtensions, request, **dict(kwargs, **{'decode_responses': True}))
 
 
 @pytest.fixture()
 def r2(request, **kwargs):
     """
-    redis.StrictRedisExtensions(host='localhost', port=6379, db=0, timezone='Asia/Shanghai')
+    redis.RedisExtensions(host='localhost', port=6379, db=0, timezone='Asia/Shanghai')
     """
-    return _get_client(redis.StrictRedisExtensions, request, **dict(kwargs, **{'timezone': 'Asia/Shanghai', 'decode_responses': True}))
+    return _get_client(redis.RedisExtensions, request, **dict(kwargs, **{'timezone': 'Asia/Shanghai', 'decode_responses': True}))
 
 
 @pytest.fixture()
 def r3(request, **kwargs):
     """
-    redis.StrictRedisExtensions(connection_pool=redis.ConnectionPool(host='localhost', port=6379, db=0), timezone='Asia/Shanghai')
+    redis.RedisExtensions(connection_pool=redis.ConnectionPool(host='localhost', port=6379, db=0), timezone='Asia/Shanghai')
     """
-    return _get_client2(redis.StrictRedisExtensions, request, **dict(kwargs, **{'decode_responses': True}))
+    return _get_client2(redis.RedisExtensions, request, **dict(kwargs, **{'decode_responses': True}))
