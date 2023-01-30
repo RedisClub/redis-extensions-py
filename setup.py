@@ -3,7 +3,7 @@ from itertools import chain
 from setuptools import setup
 
 
-version = '4.0.11'
+version = '4.0.12'
 
 
 EXTRAS_REQUIRE = {
