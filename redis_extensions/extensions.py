@@ -11,9 +11,7 @@ import uuid
 import warnings
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, Union
 
-import gvcode
 import shortuuid
-import vcode as mod_vcode
 from redis import StrictRedis
 from redis.client import bool_ok
 from redis.exceptions import DataError, ResponseError, WatchError
@@ -21,6 +19,16 @@ from redis.typing import AnyKeyT, EncodableT, ExpiryT, FieldT, KeyT, ZScoreBound
 from TimeConvert import TimeConvert as tc
 
 from .expires import BaseRedisExpires
+
+
+try:
+    import gvcode
+except ImportError:
+    pass
+try:
+    import vcode as mod_vcode
+except ImportError:
+    pass
 
 
 ResponseT = Union[Awaitable, Any]
