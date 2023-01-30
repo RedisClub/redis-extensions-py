@@ -1,7 +1,18 @@
+from itertools import chain
+
 from setuptools import setup
 
 
 version = '4.0.11'
+
+
+EXTRAS_REQUIRE = {
+    'base': [],
+    'vcode': ['verification-code'],
+    'gvcode': ['graphic-verification-code<=1.0.3'],
+    'advanced': ['verification-code', 'graphic-verification-code<=1.0.3'],
+}
+EXTRAS_REQUIRE['full'] = list(set(chain(*EXTRAS_REQUIRE.values())))
 
 
 setup(
@@ -21,11 +32,7 @@ setup(
     py_modules=[],
     python_requires='>=3.6',
     install_requires=['TimeConvert', 'redis>=4.0.2', 'shortuuid'],
-    extras_require={
-        'vcode': ['verification-code'],
-        'gvcode': ['graphic-verification-code<=1.0.3'],
-        'advanced': ['verification-code', 'graphic-verification-code<=1.0.3'],
-    },
+    extras_require=EXTRAS_REQUIRE,
 
     classifiers=[
         "License :: OSI Approved :: BSD License",
