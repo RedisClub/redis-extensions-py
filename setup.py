@@ -20,7 +20,12 @@ setup(
     packages=['redis_extensions'],
     py_modules=[],
     python_requires='>=3.7',
-    install_requires=['TimeConvert', 'redis>=4.0.2', 'shortuuid', 'verification-code', 'graphic-verification-code>=1.0.3'],
+    install_requires=['TimeConvert', 'redis>=4.0.2', 'shortuuid'],
+    extras_require={
+        'vcode': ['verification-code'],
+        'gvcode': ['graphic-verification-code>=1.0.3'],
+        'advanced': ['verification-code', 'graphic-verification-code>=1.0.3'],
+    },
 
     classifiers=[
         "License :: OSI Approved :: BSD License",
